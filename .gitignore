@@ -1,0 +1,18 @@
+# Local Google OAuth settings. Copy config.example.js to config.local.js.
+config.local.js
+
+# Runtime logs
+*.log
+server.out.log
+server.err.log
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Dependency/cache directories if the project later adds tooling.
+node_modules/
+dist/
+coverage/

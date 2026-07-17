@@ -1,0 +1,357 @@
+const microSlows = window.MICRO_SLOWS;
+
+const sampleEvents = [
+  { id: "e1", title: "進捗確認", start: "10:30", duration: 30, source: "sample" },
+  { id: "e2", title: "企画会議", start: "13:00", duration: 60, source: "sample" },
+  { id: "e3", title: "レビュー", start: "15:30", duration: 30, source: "sample" },
+  { id: "e4", title: "共有会", start: "17:00", duration: 45, source: "sample" },
+];
+
+const state = {
+  source: "sample",
+  events: [...sampleEvents],
+  dismissed: new Set(),
+  recentSlowIds: readRecentSlowIds(),
+  onboarded: localStorage.getItem("slow-index-onboarded") === "true",
+  currentProposal: null,
+  currentSlow: null,
+  timer: null,
+  startedAt: 0,
+  settings: {
+    maxSuggestions: 3,
+    maxDuration: 60,
+  },
+};
+
+const views = {
+  onboarding: document.querySelector("#onboardingView"),
+  home: document.querySelector("#homeView"),
+  slow: document.querySelector("#slowView"),
+  transition: document.querySelector("#transitionView"),
+  settings: document.querySelector("#settingsView"),
+};
+
+const calendarDay = document.querySelector("#calendarDay");
+const todayMeta = document.querySelector("#todayMeta");
+const manualForm = document.querySelector("#manualForm");
+const googleConnect = document.querySelector("#googleConnect");
+const googleStatus = document.querySelector("#googleStatus");
+const onboardingStatus = document.querySelector("#onboardingStatus");
+const progressRing = document.querySelector("#progressRing");
+
+function readRecentSlowIds() {
+  try {
+    return JSON.parse(localStorage.getItem("slow-index-recent-slows")) || [];
+  } catch {
+    return [];
+  }
+}
+
+function rememberSlow(id) {
+  state.recentSlowIds = [id, ...state.recentSlowIds.filter((item) => item !== id)].slice(0, 6);
+  localStorage.setItem("slow-index-recent-slows", JSON.stringify(state.recentSlowIds));
+}
+
+function minutesFromTime(time) {
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+function timeFromMinutes(totalMinutes) {
+  const hours = Math.floor(totalMinutes / 60).toString().padStart(2, "0");
+  const minutes = (totalMinutes % 60).toString().padStart(2, "0");
+  return `${hours}:${minutes}`;
+}
+
+function nowMinutes() {
+  const now = new Date();
+  return now.getHours() * 60 + now.getMinutes();
+}
+
+function isCurrentEvent(event, minutes = nowMinutes()) {
+  const start = minutesFromTime(event.start);
+  const end = start + Number(event.duration);
+  return start <= minutes && minutes < end;
+}
+
+function isUpcomingSoon(event, minutes = nowMinutes()) {
+  const start = minutesFromTime(event.start);
+  const diff = start - minutes;
+  return diff >= 0 && diff <= (window.SLOW_INDEX_CONFIG?.upcomingWindowMinutes || 7);
+}
+
+function getActivePrompt() {
+  if (state.events.some((event) => isCurrentEvent(event))) {
+    return null;
+  }
+
+  const upcoming = state.events
+    .filter((event) => !state.dismissed.has(event.id) && isUpcomingSoon(event))
+    .sort((a, b) => minutesFromTime(a.start) - minutesFromTime(b.start))[0];
+
+  if (!upcoming) {
+    return null;
+  }
+
+  const index = state.events.findIndex((event) => event.id === upcoming.id);
+  return buildProposalForEvent(upcoming, index);
+}
+
+function selectSlowForEvent(event, index) {
+  const eventSeed = minutesFromTime(event.start) + event.title.length + index;
+  const ordered = microSlows
+    .map((slow, slowIndex) => ({
+      slow,
+      score: (slowIndex * 7 + eventSeed) % microSlows.length,
+    }))
+    .sort((a, b) => a.score - b.score)
+    .map((item) => item.slow);
+
+  return ordered.find((slow) => !state.recentSlowIds.includes(slow.id)) || ordered[0];
+}
+
+function hasPreEventSpace(event) {
+  const startMinutes = minutesFromTime(event.start);
+  const slowStart = startMinutes - 5;
+  return !state.events
+    .filter((candidate) => candidate.id !== event.id)
+    .some((candidate) => {
+      const end = minutesFromTime(candidate.start) + Number(candidate.duration);
+      return end > slowStart - 3 && end <= startMinutes;
+    });
+}
+
+function buildProposalForEvent(event, index) {
+  const startMinutes = minutesFromTime(event.start);
+  const slowStart = startMinutes - 5;
+  return {
+    id: event.id,
+    event,
+    slow: selectSlowForEvent(event, index),
+    slowStart: timeFromMinutes(slowStart),
+    hasSpace: hasPreEventSpace(event),
+  };
+}
+
+function showView(name) {
+  Object.values(views).forEach((view) => view.classList.add("hidden"));
+  views[name].classList.remove("hidden");
+}
+
+function activateSource(source) {
+  state.source = source;
+  document.querySelectorAll(".toggle-button").forEach((item) => {
+    item.classList.toggle("active", item.dataset.source === source);
+  });
+  manualForm.classList.toggle("hidden", source !== "manual");
+  googleConnect.classList.toggle("hidden", source !== "google");
+}
+
+function completeOnboarding(source = "sample") {
+  state.onboarded = true;
+  localStorage.setItem("slow-index-onboarded", "true");
+  activateSource(source);
+  showView("home");
+  renderHome();
+}
+
+function renderHome() {
+  const proposals = state.events.map(buildProposalForEvent);
+  const activePrompt = getActivePrompt();
+  const availableCount = proposals.filter((proposal) => proposal.hasSpace && !state.dismissed.has(proposal.id)).length;
+  todayMeta.textContent = activePrompt
+    ? `${activePrompt.event.title} がもうすぐ始まります。`
+    : `${state.events.length}件の予定。${availableCount}件は直前にMicro Slowを置けます。`;
+  calendarDay.innerHTML = "";
+
+  if (activePrompt) {
+    const prompt = document.createElement("article");
+    prompt.className = "active-prompt";
+    prompt.innerHTML = `
+      <div>
+        <p class="eyebrow">Micro Slow 提案</p>
+        <h3>${activePrompt.event.start} ${activePrompt.event.title}</h3>
+        <p>${Math.min(activePrompt.slow.seconds, state.settings.maxDuration)}秒だけ整える。</p>
+      </div>
+      <button class="primary-button" data-action="start" data-id="${activePrompt.id}" type="button">はじめる</button>
+    `;
+    calendarDay.append(prompt);
+  }
+
+  if (state.events.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.innerHTML = "<p>今日の予定はまだありません。</p>";
+    calendarDay.append(empty);
+    return;
+  }
+
+  proposals.forEach((proposal) => {
+    const eventEnd = timeFromMinutes(minutesFromTime(proposal.event.start) + Number(proposal.event.duration));
+    const isDismissed = state.dismissed.has(proposal.id);
+    const item = document.createElement("article");
+    item.className = `calendar-event${isDismissed ? " dismissed" : ""}`;
+    item.innerHTML = `
+      <div class="event-time">
+        <span>${proposal.event.start}</span>
+        <span>${eventEnd}</span>
+      </div>
+      <button class="event-card" data-action="start" data-id="${proposal.id}" type="button" ${isDismissed ? "disabled" : ""}>
+        <span class="event-title">${proposal.event.title}</span>
+        <span class="event-subtext">${proposal.slowStart} から ${Math.min(proposal.slow.seconds, state.settings.maxDuration)}秒</span>
+      </button>
+      <div class="event-side">
+        <span class="event-badge">${proposal.hasSpace ? "Micro Slow" : "余白少"}</span>
+        <button class="dismiss-event" data-action="dismiss" data-id="${proposal.id}" type="button" aria-label="${proposal.event.title}のMicro Slowを今回はしない">×</button>
+      </div>
+    `;
+    calendarDay.append(item);
+  });
+}
+
+function startSlow(proposalId) {
+  const proposal = state.events.map(buildProposalForEvent).find((item) => item.id === proposalId);
+  if (!proposal) return;
+
+  state.currentProposal = proposal;
+  state.currentSlow = {
+    ...proposal.slow,
+    seconds: Math.min(proposal.slow.seconds, state.settings.maxDuration),
+  };
+  document.querySelector("#slowTitle").textContent = state.currentSlow.title;
+  document.querySelector("#slowInstruction").textContent = state.currentSlow.instruction;
+  document.querySelector("#slowDuration").textContent = `最大 ${state.currentSlow.seconds}秒`;
+  showView("slow");
+  rememberSlow(state.currentSlow.id);
+  runProgress();
+}
+
+function runProgress() {
+  window.clearInterval(state.timer);
+  state.startedAt = Date.now();
+  progressRing.style.background = "conic-gradient(var(--accent) 0deg, rgba(46, 111, 101, 0.1) 0deg)";
+  state.timer = window.setInterval(() => {
+    const elapsed = (Date.now() - state.startedAt) / 1000;
+    const ratio = Math.min(elapsed / state.currentSlow.seconds, 1);
+    const degrees = Math.round(ratio * 360);
+    progressRing.style.background = `conic-gradient(var(--accent) ${degrees}deg, rgba(46, 111, 101, 0.1) ${degrees}deg)`;
+    if (ratio >= 1) {
+      finishSlow();
+    }
+  }, 250);
+}
+
+function finishSlow() {
+  window.clearInterval(state.timer);
+  const event = state.currentProposal?.event;
+  if (event) {
+    state.dismissed.add(event.id);
+    const start = minutesFromTime(event.start);
+    const remaining = Math.max(start - minutesFromTime(state.currentProposal.slowStart), 0);
+    document.querySelector("#transitionText").textContent = `${event.title}まで、まだ約${remaining}分あります。`;
+  }
+  showView("transition");
+}
+
+function handleProposalAction(event) {
+  const button = event.target.closest("button[data-action]");
+  if (!button) return;
+
+  const id = button.dataset.id;
+  if (button.dataset.action === "start") {
+    if (state.dismissed.has(id)) return;
+    startSlow(id);
+  }
+  if (button.dataset.action === "dismiss") {
+    state.dismissed.add(id);
+    renderHome();
+  }
+}
+
+function addManualEvent(event) {
+  event.preventDefault();
+  const title = document.querySelector("#eventTitleInput").value.trim() || "予定";
+  const start = document.querySelector("#eventTimeInput").value;
+  const duration = Number(document.querySelector("#eventDurationInput").value);
+  state.events.push({
+    id: `manual-${Date.now()}`,
+    title,
+    start,
+    duration,
+    source: "manual",
+  });
+  state.events.sort((a, b) => minutesFromTime(a.start) - minutesFromTime(b.start));
+  renderHome();
+}
+
+async function loadGoogleEvents() {
+  if (!window.SlowIndexGoogleCalendar?.isConfigured()) {
+    googleStatus.textContent = "config.js に Google OAuth Client ID を設定してください。";
+    onboardingStatus.classList.remove("hidden");
+    return;
+  }
+
+  googleStatus.textContent = "Google Calendarを読み込んでいます。";
+  onboardingStatus.classList.add("hidden");
+  try {
+    const events = await window.SlowIndexGoogleCalendar.listTodayEvents();
+    state.events = events;
+    state.dismissed.clear();
+    googleStatus.textContent = `${events.length}件の予定を読み込みました。`;
+    completeOnboarding("google");
+    renderHome();
+  } catch (error) {
+    googleStatus.textContent = "Google Calendarを読み込めませんでした。設定と許可を確認してください。";
+    onboardingStatus.textContent = "Google Calendarを読み込めませんでした。設定と許可を確認してください。";
+    onboardingStatus.classList.remove("hidden");
+    console.error(error);
+  }
+}
+
+document.querySelector("#calendarDay").addEventListener("click", handleProposalAction);
+document.querySelector("#finishSlowButton").addEventListener("click", finishSlow);
+document.querySelector("#completeButton").addEventListener("click", () => {
+  showView("home");
+  renderHome();
+});
+document.querySelector("#reloadButton").addEventListener("click", renderHome);
+document.querySelector("#googleConnectButton").addEventListener("click", loadGoogleEvents);
+document.querySelector("#onboardingGoogleButton").addEventListener("click", loadGoogleEvents);
+document.querySelector("#onboardingDemoButton").addEventListener("click", () => completeOnboarding("sample"));
+document.querySelector("#settingsButton").addEventListener("click", () => showView("settings"));
+document.querySelector("#saveSettingsButton").addEventListener("click", () => {
+  state.settings.maxSuggestions = Number(document.querySelector("#maxSuggestionsInput").value);
+  state.settings.maxDuration = Number(document.querySelector("#maxDurationInput").value);
+  showView("home");
+  renderHome();
+});
+
+document.querySelectorAll(".toggle-button").forEach((button) => {
+  button.addEventListener("click", () => {
+    activateSource(button.dataset.source);
+    if (state.source === "sample") {
+      state.events = [...sampleEvents];
+      state.dismissed.clear();
+      renderHome();
+    }
+  });
+});
+
+document.querySelectorAll(".sense-button").forEach((button) => {
+  button.addEventListener("click", () => {
+    document.querySelectorAll(".sense-button").forEach((item) => item.classList.remove("selected"));
+    button.classList.add("selected");
+    window.setTimeout(() => {
+      showView("home");
+      renderHome();
+    }, 450);
+  });
+});
+
+manualForm.addEventListener("submit", addManualEvent);
+if (state.onboarded) {
+  showView("home");
+  renderHome();
+} else {
+  showView("onboarding");
+}

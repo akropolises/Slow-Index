@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Slow Index</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Slow Index</p>
+          <h1>次の予定の前に、短く整える。</h1>
+        </div>
+        <button class="icon-button" id="settingsButton" type="button" aria-label="設定">
+          <span aria-hidden="true">⚙</span>
+        </button>
+      </header>
+
+      <main>
+        <section class="panel onboarding hidden" id="onboardingView" aria-labelledby="onboardingTitle">
+          <p class="eyebrow">初回設定</p>
+          <h2 id="onboardingTitle">Google Calendarと連携しますか。</h2>
+          <p>予定を読み取り、現在予定がなく、もうすぐ次の予定が始まるときだけMicro Slowを提案します。</p>
+          <div class="onboarding-actions">
+            <button class="primary-button" id="onboardingGoogleButton" type="button">Google Calendarと連携</button>
+            <button class="ghost-button" id="onboardingDemoButton" type="button">デモで見る</button>
+          </div>
+          <p class="setup-note hidden" id="onboardingStatus">config.js に Google OAuth Client ID を設定してください。</p>
+        </section>
+
+        <section class="panel hidden" id="homeView" aria-labelledby="homeTitle">
+          <div class="section-head">
+            <div>
+              <h2 id="homeTitle">今日のカレンダー</h2>
+              <p id="todayMeta">予定を読み込んでいます。</p>
+            </div>
+            <button class="secondary-button" id="reloadButton" type="button">更新</button>
+          </div>
+
+          <div class="calendar-toggle" role="group" aria-label="カレンダー">
+            <button class="toggle-button active" data-source="sample" type="button">ダミー予定</button>
+            <button class="toggle-button" data-source="google" type="button">Google</button>
+            <button class="toggle-button" data-source="manual" type="button">手入力</button>
+          </div>
+
+          <div class="google-connect hidden" id="googleConnect">
+            <p id="googleStatus">Google Calendarを読み込むにはClient IDが必要です。</p>
+            <button class="primary-button" id="googleConnectButton" type="button">Google Calendarを読む</button>
+          </div>
+
+          <form class="manual-form hidden" id="manualForm">
+            <label>
+              予定名
+              <input id="eventTitleInput" type="text" value="企画会議">
+            </label>
+            <label>
+              開始時刻
+              <input id="eventTimeInput" type="time" value="14:00">
+            </label>
+            <label>
+              長さ
+              <select id="eventDurationInput">
+                <option value="30">30分</option>
+                <option value="45">45分</option>
+                <option value="60">60分</option>
+              </select>
+            </label>
+            <button class="primary-button" type="submit">予定を追加</button>
+          </form>
+
+          <div class="calendar-day" id="calendarDay" aria-label="今日の予定"></div>
+        </section>
+
+        <section class="panel hidden" id="slowView" aria-labelledby="slowTitle">
+          <div class="slow-stage" id="slowStage">
+            <div class="light-field" aria-hidden="true">
+              <div class="breath-circle"></div>
+              <div class="progress-ring" id="progressRing"></div>
+            </div>
+            <p class="eyebrow" id="slowDuration">最大 60秒</p>
+            <h2 id="slowTitle">周囲の音を聞く</h2>
+            <p class="slow-instruction" id="slowInstruction">画面から目を離し、近くの音と遠くの音をひとつずつ聞く。</p>
+          </div>
+          <div class="slow-actions">
+            <button class="primary-button" id="finishSlowButton" type="button">終える</button>
+          </div>
+        </section>
+
+        <section class="panel hidden" id="transitionView" aria-labelledby="transitionTitle">
+          <p class="eyebrow">Micro Slow 完了</p>
+          <h2 id="transitionTitle">次の予定へ戻れます。</h2>
+          <p id="transitionText">少し余白があります。</p>
+          <p class="sense-prompt">今の感じに近い色があれば、ひとつだけ選べます。</p>
+          <div class="sense-row" aria-label="今の感覚に近い色">
+            <button class="sense-button sense-green" data-sense="green" type="button" aria-label="静かな緑"></button>
+            <button class="sense-button sense-gold" data-sense="gold" type="button" aria-label="あたたかい金色"></button>
+            <button class="sense-button sense-blue" data-sense="blue" type="button" aria-label="澄んだ青"></button>
+            <button class="sense-button sense-rose" data-sense="rose" type="button" aria-label="やわらかい赤"></button>
+          </div>
+          <div class="transition-actions">
+            <button class="primary-button" id="completeButton" type="button">終える</button>
+          </div>
+        </section>
+
+        <section class="panel hidden" id="settingsView" aria-labelledby="settingsTitle">
+          <div class="section-head">
+            <div>
+              <h2 id="settingsTitle">設定</h2>
+              <p>提案の強さを控えめに調整できます。</p>
+            </div>
+          </div>
+          <label class="setting-line">
+            <span>1日の最大提案回数</span>
+            <input id="maxSuggestionsInput" type="number" min="1" max="8" value="3">
+          </label>
+          <label class="setting-line">
+            <span>Micro Slowの最大時間</span>
+            <select id="maxDurationInput">
+              <option value="30">30秒</option>
+              <option value="60" selected>60秒</option>
+              <option value="120">2分</option>
+              <option value="180">3分</option>
+            </select>
+          </label>
+          <button class="primary-button" id="saveSettingsButton" type="button">保存</button>
+        </section>
+      </main>
+    </div>
+
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="config.js"></script>
+    <script src="config.local.js"></script>
+    <script src="micro-slows.js"></script>
+    <script src="google-calendar.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

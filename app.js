@@ -43,6 +43,7 @@ const googleStatus = document.querySelector("#googleStatus");
 const onboardingStatus = document.querySelector("#onboardingStatus");
 const progressRing = document.querySelector("#progressRing");
 const notificationButton = document.querySelector("#notificationButton");
+const testNotificationButton = document.querySelector("#testNotificationButton");
 const notificationStatus = document.querySelector("#notificationStatus");
 
 function readRecentSlowIds() {
@@ -243,11 +244,26 @@ function isNotificationSupported() {
 }
 
 function updateNotificationStatus() {
+  const serviceWorkerReady = "serviceWorker" in navigator;
+  const secureReady = window.isSecureContext;
+
   if (!isNotificationSupported()) {
     notificationButton.disabled = true;
+    testNotificationButton.disabled = true;
     notificationStatus.textContent = "このブラウザは通知に対応していません。";
     return;
   }
+
+  if (!secureReady || !serviceWorkerReady) {
+    notificationButton.disabled = true;
+    testNotificationButton.disabled = true;
+    notificationStatus.textContent =
+      "通知にはlocalhostまたはHTTPSでの起動が必要です。http://127.0.0.1:8000/ か http://localhost:8000/ で開いてください。";
+    return;
+  }
+
+  notificationButton.disabled = false;
+  testNotificationButton.disabled = Notification.permission !== "granted";
 
   if (Notification.permission === "granted") {
     notificationButton.textContent = "通知は許可済み";
@@ -275,6 +291,34 @@ async function requestNotificationPermission() {
   updateNotificationStatus();
 }
 
+function getFirstAvailableProposal() {
+  return state.events
+    .map(buildProposalForEvent)
+    .find((proposal) => proposal.hasSpace && !state.dismissed.has(proposal.id));
+}
+
+async function sendTestNotification() {
+  if (Notification.permission !== "granted") {
+    await requestNotificationPermission();
+  }
+
+  const proposal = getFirstAvailableProposal();
+  if (!proposal) {
+    notificationStatus.textContent = "通知テストに使える予定がありません。手入力で予定を追加してください。";
+    return;
+  }
+
+  const shown = await showSlowNotification(proposal, {
+    title: "Slow Indexのテスト通知",
+    body: "通知をクリックするとMicro Slowを開始します。",
+    tag: "slow-index-test",
+  });
+
+  notificationStatus.textContent = shown
+    ? "テスト通知を送信しました。OSの通知欄を確認してください。"
+    : "通知を送信できませんでした。ブラウザの通知設定とService Workerの状態を確認してください。";
+}
+
 async function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) {
     return null;
@@ -282,9 +326,11 @@ async function registerServiceWorker() {
 
   try {
     state.serviceWorkerRegistration = await navigator.serviceWorker.register("sw.js");
+    updateNotificationStatus();
     return state.serviceWorkerRegistration;
   } catch (error) {
     console.error("Service Worker registration failed.", error);
+    notificationStatus.textContent = "Service Workerを登録できませんでした。起動URLとブラウザ設定を確認してください。";
     return null;
   }
 }
@@ -310,7 +356,7 @@ function handleServiceWorkerMessage(event) {
   startSlow(event.data.proposalId, { fromNotification: true });
 }
 
-async function showSlowNotification(proposal) {
+async function showSlowNotification(proposal, overrides = {}) {
   if (!isNotificationSupported() || Notification.permission !== "granted") {
     return false;
   }
@@ -321,9 +367,9 @@ async function showSlowNotification(proposal) {
   }
 
   const seconds = Math.min(proposal.slow.seconds, state.settings.maxDuration);
-  await registration.showNotification("Micro Slowの時間です", {
-    body: `${proposal.event.title}の前に、${seconds}秒だけ整えます。`,
-    tag: `slow-index-${proposal.id}`,
+  await registration.showNotification(overrides.title || "Micro Slowの時間です", {
+    body: overrides.body || `${proposal.event.title}の前に、${seconds}秒だけ整えます。`,
+    tag: overrides.tag || `slow-index-${proposal.id}`,
     renotify: false,
     data: {
       proposalId: proposal.id,
@@ -397,6 +443,7 @@ function bootNotifications() {
   }
 
   registerServiceWorker().then(() => {
+    updateNotificationStatus();
     handleStartupRequest();
     renderHome();
   });
@@ -508,6 +555,7 @@ document.querySelector("#onboardingGoogleButton").addEventListener("click", load
 document.querySelector("#onboardingDemoButton").addEventListener("click", () => completeOnboarding("sample"));
 document.querySelector("#settingsButton").addEventListener("click", () => showView("settings"));
 notificationButton.addEventListener("click", requestNotificationPermission);
+testNotificationButton.addEventListener("click", sendTestNotification);
 document.querySelector("#saveSettingsButton").addEventListener("click", () => {
   state.settings.maxSuggestions = Number(document.querySelector("#maxSuggestionsInput").value);
   state.settings.maxDuration = Number(document.querySelector("#maxDurationInput").value);

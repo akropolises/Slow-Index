@@ -9,7 +9,7 @@ const sampleEvents = [
 
 const state = {
   source: "sample",
-  events: [...sampleEvents],
+  events: readStoredEvents() || [...sampleEvents],
   dismissed: new Set(),
   recentSlowIds: readRecentSlowIds(),
   onboarded: localStorage.getItem("slow-index-onboarded") === "true",
@@ -20,7 +20,7 @@ const state = {
   serviceWorkerRegistration: null,
   startedAt: 0,
   view: null,
-  notified: new Set(),
+  startedAutomatically: new Set(),
   settings: {
     maxSuggestions: 3,
     maxDuration: 60,
@@ -52,6 +52,18 @@ function readRecentSlowIds() {
   } catch {
     return [];
   }
+}
+
+function readStoredEvents() {
+  try {
+    return JSON.parse(localStorage.getItem("slow-index-events"));
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredEvents() {
+  localStorage.setItem("slow-index-events", JSON.stringify(state.events));
 }
 
 function rememberSlow(id) {
@@ -211,7 +223,7 @@ function renderHome() {
         <span class="event-subtext">${proposal.slowStart} から ${Math.min(proposal.slow.seconds, state.settings.maxDuration)}秒</span>
       </button>
       <div class="event-side">
-        <span class="event-badge">${proposal.hasSpace ? "通知" : "余白少"}</span>
+        <span class="event-badge">${proposal.hasSpace ? "自動開始" : "余白少"}</span>
         <button class="dismiss-event" data-action="dismiss" data-id="${proposal.id}" type="button" aria-label="${proposal.event.title}のMicro Slowを今回はしない">×</button>
       </div>
     `;
@@ -223,7 +235,7 @@ function startSlow(proposalId, options = {}) {
   const proposal = state.events.map(buildProposalForEvent).find((item) => item.id === proposalId);
   if (!proposal) return;
   if (options.fromNotification) {
-    state.notified.add(proposal.id);
+    state.startedAutomatically.add(proposal.id);
   }
 
   state.currentProposal = proposal;
@@ -287,7 +299,11 @@ async function requestNotificationPermission() {
     return;
   }
 
-  await Notification.requestPermission();
+  const permission = await Notification.requestPermission();
+  if (permission === "granted") {
+    await subscribeToWebPush();
+    syncPushReminders();
+  }
   updateNotificationStatus();
 }
 
@@ -298,6 +314,11 @@ function getFirstAvailableProposal() {
 }
 
 async function sendTestNotification() {
+  if (!isNotificationSupported()) {
+    updateNotificationStatus();
+    return;
+  }
+
   if (Notification.permission !== "granted") {
     await requestNotificationPermission();
   }
@@ -348,6 +369,75 @@ async function getServiceWorkerRegistration() {
   return state.serviceWorkerRegistration;
 }
 
+function urlBase64ToUint8Array(value) {
+  const padding = "=".repeat((4 - (value.length % 4)) % 4);
+  const base64 = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = window.atob(base64);
+  return Uint8Array.from([...raw].map((character) => character.charCodeAt(0)));
+}
+
+async function subscribeToWebPush() {
+  const publicKey = window.SLOW_INDEX_CONFIG?.pushPublicKey;
+  if (!publicKey || !("PushManager" in window)) {
+    return false;
+  }
+
+  const registration = await getServiceWorkerRegistration();
+  if (!registration) {
+    return false;
+  }
+
+  const subscription =
+    (await registration.pushManager.getSubscription()) ||
+    (await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey),
+    }));
+
+  await fetch("/api/push/subscribe", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(subscription),
+  });
+  return true;
+}
+
+function buildPushReminders() {
+  const now = Date.now();
+  return state.events
+    .map(buildProposalForEvent)
+    .filter((proposal) => proposal.hasSpace && !state.dismissed.has(proposal.id))
+    .map((proposal) => {
+      const dueAt = new Date();
+      dueAt.setHours(Math.floor(proposal.slowStartMinutes / 60), proposal.slowStartMinutes % 60, 0, 0);
+      return {
+        id: proposal.id,
+        eventTitle: proposal.event.title,
+        seconds: Math.min(proposal.slow.seconds, state.settings.maxDuration),
+        dueAt: dueAt.toISOString(),
+        url: location.href,
+      };
+    })
+    .filter((reminder) => new Date(reminder.dueAt).getTime() > now);
+}
+
+async function syncPushReminders() {
+  if (!isNotificationSupported() || Notification.permission !== "granted" || !window.SLOW_INDEX_CONFIG?.pushPublicKey) {
+    return;
+  }
+
+  try {
+    await subscribeToWebPush();
+    await fetch("/api/push/reminders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reminders: buildPushReminders() }),
+    });
+  } catch (error) {
+    console.error("Push reminder sync failed.", error);
+  }
+}
+
 function handleServiceWorkerMessage(event) {
   if (event.data?.type !== "START_SLOW") {
     return;
@@ -380,7 +470,7 @@ async function showSlowNotification(proposal, overrides = {}) {
   return true;
 }
 
-function getDueNotificationProposal(minutes = nowMinutes()) {
+function getDueStartProposal(minutes = nowMinutes()) {
   if (!state.onboarded || state.view === "onboarding" || state.view === "slow" || state.view === "transition") {
     return null;
   }
@@ -395,7 +485,7 @@ function getDueNotificationProposal(minutes = nowMinutes()) {
       return (
         proposal.hasSpace &&
         !state.dismissed.has(proposal.id) &&
-        !state.notified.has(proposal.id) &&
+        !state.startedAutomatically.has(proposal.id) &&
         proposal.slowStartMinutes <= minutes &&
         minutes < proposal.eventStartMinutes
       );
@@ -403,8 +493,8 @@ function getDueNotificationProposal(minutes = nowMinutes()) {
     .sort((a, b) => a.eventStartMinutes - b.eventStartMinutes)[0] || null;
 }
 
-function notifyDueSlow() {
-  const proposal = getDueNotificationProposal();
+function startDueSlow() {
+  const proposal = getDueStartProposal();
   if (!proposal) {
     if (state.view === "home") {
       renderHome();
@@ -412,16 +502,8 @@ function notifyDueSlow() {
     return;
   }
 
-  showSlowNotification(proposal).then((shown) => {
-    if (shown) {
-      state.notified.add(proposal.id);
-      return;
-    }
-
-    if (state.view === "home") {
-      renderHome();
-    }
-  });
+  state.startedAutomatically.add(proposal.id);
+  startSlow(proposal.id);
 }
 
 function handleStartupRequest() {
@@ -451,13 +533,13 @@ function bootNotifications() {
 
 function startNotificationScheduler() {
   window.clearInterval(state.schedulerTimer);
-  state.schedulerTimer = window.setInterval(notifyDueSlow, 15000);
+  state.schedulerTimer = window.setInterval(startDueSlow, 15000);
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) {
-      notifyDueSlow();
+      startDueSlow();
     }
   });
-  notifyDueSlow();
+  startDueSlow();
 }
 
 function runProgress() {
@@ -515,6 +597,8 @@ function addManualEvent(event) {
     source: "manual",
   });
   state.events.sort((a, b) => minutesFromTime(a.start) - minutesFromTime(b.start));
+  writeStoredEvents();
+  syncPushReminders();
   renderHome();
 }
 
@@ -530,10 +614,12 @@ async function loadGoogleEvents() {
   try {
     const events = await window.SlowIndexGoogleCalendar.listTodayEvents();
     state.events = events;
+    writeStoredEvents();
     state.dismissed.clear();
-    state.notified.clear();
+    state.startedAutomatically.clear();
     googleStatus.textContent = `${events.length}件の予定を読み込みました。`;
     completeOnboarding("google");
+    syncPushReminders();
     renderHome();
   } catch (error) {
     googleStatus.textContent = "Google Calendarを読み込めませんでした。設定と許可を確認してください。";
@@ -568,8 +654,10 @@ document.querySelectorAll(".toggle-button").forEach((button) => {
     activateSource(button.dataset.source);
     if (state.source === "sample") {
       state.events = [...sampleEvents];
+      writeStoredEvents();
       state.dismissed.clear();
-      state.notified.clear();
+      state.startedAutomatically.clear();
+      syncPushReminders();
       renderHome();
     }
   });
@@ -596,3 +684,4 @@ if (state.onboarded) {
 updateNotificationStatus();
 bootNotifications();
 startNotificationScheduler();
+syncPushReminders();

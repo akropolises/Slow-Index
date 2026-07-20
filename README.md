@@ -24,7 +24,11 @@ http://127.0.0.1:8000/
 http://<PCのIPアドレス>:8000/
 ```
 
-依存パッケージは不要です。
+通常のデモ表示だけなら依存パッケージは不要です。ブラウザを閉じた状態のWeb Push通知を試す場合は依存パッケージをインストールします。
+
+```powershell
+npm install
+```
 
 ## 開発
 
@@ -49,7 +53,8 @@ Copy-Item config.example.js config.local.js
 - 手入力による予定追加
 - カレンダー風タイムラインから予定を選んでMicro Slowを開始
 - 予定5分前のMicro Slow候補表示
-- 予定5分前になったときのService Worker経由のブラウザ通知
+- ページを開いている状態で予定5分前になったときのMicro Slow自動開始
+- ページを閉じた状態で予定5分前になったときのWeb Push通知
 - 通知クリックからSlow Indexを開いてMicro Slow開始
 - 現在予定がなく、もうすぐ始まる予定がある場合のMicro Slow提案
 - 「今回はしない」の除外操作
@@ -76,6 +81,7 @@ window.SLOW_INDEX_CONFIG = {
   googleClientId: "YOUR_GOOGLE_OAUTH_CLIENT_ID",
   googleCalendarId: "primary",
   upcomingWindowMinutes: 7,
+  pushPublicKey: "YOUR_VAPID_PUBLIC_KEY",
 };
 ```
 
@@ -125,9 +131,31 @@ Micro Slowは、予定の前に短い感覚体験を置くことで、焦りや�
 
 ## 通知の制約
 
-現在の通知は、Slow Indexのページが開かれている間に予定5分前を検知し、Service Worker経由でブラウザ通知を出します。
+Slow Indexのページが開かれている間は、予定5分前を検知すると通知を出さずにMicro Slowを直接開始します。
 
-通知をクリックすると、既存のSlow Indexタブを前面に戻すか、新しく開いてMicro Slowを開始します。
+ページを閉じた状態で通知するには、Web Push対応サーバーを起動します。
+
+```powershell
+npm install
+npx web-push generate-vapid-keys
+```
+
+生成された鍵を環境変数に設定し、`config.local.js` に公開鍵を入れます。
+
+```powershell
+$env:VAPID_PUBLIC_KEY="YOUR_VAPID_PUBLIC_KEY"
+$env:VAPID_PRIVATE_KEY="YOUR_VAPID_PRIVATE_KEY"
+$env:VAPID_SUBJECT="mailto:your-email@example.com"
+npm run start:push
+```
+
+`config.local.js`:
+
+```js
+window.SLOW_INDEX_CONFIG.pushPublicKey = "YOUR_VAPID_PUBLIC_KEY";
+```
+
+Web Push通知をクリックすると、既存のSlow Indexタブを前面に戻すか、新しく開いてMicro Slowを開始します。
 
 通知を使う場合は、以下のどちらかで開いてください。
 
@@ -140,11 +168,11 @@ http://localhost:8000/
 
 通知が来ない場合は、設定画面の「テスト通知」を押してOSの通知欄に出るか確認してください。出ない場合は、ブラウザまたはOS側でSlow Indexの通知がブロックされています。
 
-ブラウザを完全に閉じた状態や、ページが一度も開かれていない状態で通知するには、PushサーバーとVAPID鍵を使うWeb Push実装が別途必要です。
+Web Push通知はPushサーバーが起動している間だけ送られます。予定はページを開いたとき、Google Calendarを読み込んだとき、または手入力予定を追加したときにPushサーバーへ登録されます。
 
 ## 初期版でやっていないこと
 
-- Web Pushやブラウザを閉じた状態での通知
+- Pushサーバーをクラウドに置いた常時稼働
 - 予定種別ごとのMicro Slow最適化
 - ユーザータイプ分類
 - スコア、ランキング、連続記録

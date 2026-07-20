@@ -6,6 +6,21 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
+self.addEventListener("push", (event) => {
+  const data = event.data?.json() || {};
+  event.waitUntil(
+    self.registration.showNotification(data.title || "Micro Slowの時間です", {
+      body: data.body || "次の予定の前に、短く整えます。",
+      tag: data.proposalId ? `slow-index-${data.proposalId}` : "slow-index-push",
+      renotify: false,
+      data: {
+        proposalId: data.proposalId,
+        url: data.url || self.location.origin,
+      },
+    })
+  );
+});
+
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 

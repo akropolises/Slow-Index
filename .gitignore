@@ -5,6 +5,7 @@ config.local.js
 *.log
 server.out.log
 server.err.log
+push-subscriptions.json
 
 # OS/editor noise
 .DS_Store

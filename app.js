@@ -16,7 +16,10 @@ const state = {
   currentProposal: null,
   currentSlow: null,
   timer: null,
+  schedulerTimer: null,
   startedAt: 0,
+  view: null,
+  autoStarted: new Set(),
   settings: {
     maxSuggestions: 3,
     maxDuration: 60,
@@ -129,6 +132,8 @@ function buildProposalForEvent(event, index) {
     event,
     slow: selectSlowForEvent(event, index),
     slowStart: timeFromMinutes(slowStart),
+    slowStartMinutes: slowStart,
+    eventStartMinutes: startMinutes,
     hasSpace: hasPreEventSpace(event),
   };
 }
@@ -136,6 +141,7 @@ function buildProposalForEvent(event, index) {
 function showView(name) {
   Object.values(views).forEach((view) => view.classList.add("hidden"));
   views[name].classList.remove("hidden");
+  state.view = name;
 }
 
 function activateSource(source) {
@@ -201,7 +207,7 @@ function renderHome() {
         <span class="event-subtext">${proposal.slowStart} から ${Math.min(proposal.slow.seconds, state.settings.maxDuration)}秒</span>
       </button>
       <div class="event-side">
-        <span class="event-badge">${proposal.hasSpace ? "Micro Slow" : "余白少"}</span>
+        <span class="event-badge">${proposal.hasSpace ? "自動開始" : "余白少"}</span>
         <button class="dismiss-event" data-action="dismiss" data-id="${proposal.id}" type="button" aria-label="${proposal.event.title}のMicro Slowを今回はしない">×</button>
       </div>
     `;
@@ -209,9 +215,12 @@ function renderHome() {
   });
 }
 
-function startSlow(proposalId) {
+function startSlow(proposalId, options = {}) {
   const proposal = state.events.map(buildProposalForEvent).find((item) => item.id === proposalId);
   if (!proposal) return;
+  if (options.automatic) {
+    state.autoStarted.add(proposal.id);
+  }
 
   state.currentProposal = proposal;
   state.currentSlow = {
@@ -224,6 +233,52 @@ function startSlow(proposalId) {
   showView("slow");
   rememberSlow(state.currentSlow.id);
   runProgress();
+}
+
+function getDueAutoProposal(minutes = nowMinutes()) {
+  if (!state.onboarded || state.view === "onboarding" || state.view === "slow" || state.view === "transition") {
+    return null;
+  }
+
+  if (state.events.some((event) => isCurrentEvent(event, minutes))) {
+    return null;
+  }
+
+  return state.events
+    .map(buildProposalForEvent)
+    .filter((proposal) => {
+      return (
+        proposal.hasSpace &&
+        !state.dismissed.has(proposal.id) &&
+        !state.autoStarted.has(proposal.id) &&
+        proposal.slowStartMinutes <= minutes &&
+        minutes < proposal.eventStartMinutes
+      );
+    })
+    .sort((a, b) => a.eventStartMinutes - b.eventStartMinutes)[0] || null;
+}
+
+function startDueAutoSlow() {
+  const proposal = getDueAutoProposal();
+  if (!proposal) {
+    if (state.view === "home") {
+      renderHome();
+    }
+    return;
+  }
+
+  startSlow(proposal.id, { automatic: true });
+}
+
+function startAutoScheduler() {
+  window.clearInterval(state.schedulerTimer);
+  state.schedulerTimer = window.setInterval(startDueAutoSlow, 15000);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      startDueAutoSlow();
+    }
+  });
+  startDueAutoSlow();
 }
 
 function runProgress() {
@@ -297,6 +352,7 @@ async function loadGoogleEvents() {
     const events = await window.SlowIndexGoogleCalendar.listTodayEvents();
     state.events = events;
     state.dismissed.clear();
+    state.autoStarted.clear();
     googleStatus.textContent = `${events.length}件の予定を読み込みました。`;
     completeOnboarding("google");
     renderHome();
@@ -332,6 +388,7 @@ document.querySelectorAll(".toggle-button").forEach((button) => {
     if (state.source === "sample") {
       state.events = [...sampleEvents];
       state.dismissed.clear();
+      state.autoStarted.clear();
       renderHome();
     }
   });
@@ -355,3 +412,4 @@ if (state.onboarded) {
 } else {
   showView("onboarding");
 }
+startAutoScheduler();

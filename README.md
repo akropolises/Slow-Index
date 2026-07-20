@@ -49,6 +49,7 @@ Copy-Item config.example.js config.local.js
 - 手入力による予定追加
 - カレンダー風タイムラインから予定を選んでMicro Slowを開始
 - 予定5分前のMicro Slow候補表示
+- 予定5分前になったときのMicro Slow自動開始
 - 現在予定がなく、もうすぐ始まる予定がある場合のMicro Slow提案
 - 「今回はしない」の除外操作
 - 18種類のMicro Slow体験

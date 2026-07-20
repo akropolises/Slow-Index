@@ -157,7 +157,7 @@ window.SLOW_INDEX_CONFIG.pushPublicKey = "YOUR_VAPID_PUBLIC_KEY";
 
 Web Push通知をクリックすると、既存のSlow Indexタブを前面に戻すか、新しく開いてMicro Slowを開始します。
 
-Slow Indexのページが開いている間は、Pushサーバーにハートビートを送り、サーバー側のPush通知を抑止します。そのため、ページ表示中は通知ではなく画面内でMicro Slowが直接始まります。
+Slow Indexのページが開いている間は、ページ側でも予定5分前を検知してMicro Slowを直接開始します。Push通知も届く場合がありますが、すでにMicro Slowが始まっている場合、通知クリックで二重開始はしません。
 
 通知を使う場合は、以下のどちらかで開いてください。
 

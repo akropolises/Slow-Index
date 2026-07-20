@@ -11,8 +11,6 @@ const publicKey = process.env.VAPID_PUBLIC_KEY || "";
 const privateKey = process.env.VAPID_PRIVATE_KEY || "";
 const subject = process.env.VAPID_SUBJECT || "mailto:slow-index@example.com";
 const timers = new Map();
-let lastClientHeartbeat = 0;
-const activeClientWindowMs = 45000;
 
 const types = {
   ".html": "text/html; charset=utf-8",
@@ -93,11 +91,6 @@ function scheduleReminder(reminder) {
 }
 
 async function sendReminder(reminder) {
-  if (Date.now() - lastClientHeartbeat < activeClientWindowMs) {
-    console.log(`Skipped push for ${reminder.id}; Slow Index is open.`);
-    return;
-  }
-
   const subscriptions = readSubscriptions();
   const payload = JSON.stringify({
     title: "Micro Slowの時間です",
@@ -132,12 +125,6 @@ async function handleApi(request, response, pathname) {
     const data = await readJson(request);
     const scheduled = (data.reminders || []).filter(scheduleReminder).length;
     sendJson(response, 200, { ok: true, scheduled });
-    return;
-  }
-
-  if (pathname === "/api/client-heartbeat" && request.method === "POST") {
-    lastClientHeartbeat = Date.now();
-    sendJson(response, 200, { ok: true });
     return;
   }
 

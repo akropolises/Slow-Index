@@ -17,7 +17,6 @@ const state = {
   currentSlow: null,
   timer: null,
   schedulerTimer: null,
-  heartbeatTimer: null,
   serviceWorkerRegistration: null,
   startedAt: 0,
   view: null,
@@ -252,6 +251,18 @@ function startSlow(proposalId, options = {}) {
   runProgress();
 }
 
+function startSlowFromNotification(proposalId) {
+  if (state.view === "slow" || state.view === "transition") {
+    return;
+  }
+
+  if (state.dismissed.has(proposalId) || state.startedAutomatically.has(proposalId)) {
+    return;
+  }
+
+  startSlow(proposalId, { fromNotification: true });
+}
+
 function isNotificationSupported() {
   return "Notification" in window;
 }
@@ -439,22 +450,12 @@ async function syncPushReminders() {
   }
 }
 
-function sendClientHeartbeat() {
-  if (document.hidden) {
-    return;
-  }
-
-  fetch("/api/client-heartbeat", {
-    method: "POST",
-  }).catch(() => {});
-}
-
 function handleServiceWorkerMessage(event) {
   if (event.data?.type !== "START_SLOW") {
     return;
   }
 
-  startSlow(event.data.proposalId, { fromNotification: true });
+  startSlowFromNotification(event.data.proposalId);
 }
 
 async function showSlowNotification(proposal, overrides = {}) {
@@ -526,7 +527,7 @@ function handleStartupRequest() {
 
   window.history.replaceState({}, "", window.location.pathname);
   window.setTimeout(() => {
-    startSlow(proposalId, { fromNotification: true });
+    startSlowFromNotification(proposalId);
   }, 100);
 }
 
@@ -551,13 +552,6 @@ function startNotificationScheduler() {
     }
   });
   startDueSlow();
-}
-
-function startClientHeartbeat() {
-  window.clearInterval(state.heartbeatTimer);
-  sendClientHeartbeat();
-  state.heartbeatTimer = window.setInterval(sendClientHeartbeat, 15000);
-  document.addEventListener("visibilitychange", sendClientHeartbeat);
 }
 
 function runProgress() {
@@ -702,5 +696,4 @@ if (state.onboarded) {
 updateNotificationStatus();
 bootNotifications();
 startNotificationScheduler();
-startClientHeartbeat();
 syncPushReminders();

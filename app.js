@@ -17,6 +17,7 @@ const state = {
   currentSlow: null,
   timer: null,
   schedulerTimer: null,
+  heartbeatTimer: null,
   serviceWorkerRegistration: null,
   startedAt: 0,
   view: null,
@@ -438,6 +439,16 @@ async function syncPushReminders() {
   }
 }
 
+function sendClientHeartbeat() {
+  if (document.hidden) {
+    return;
+  }
+
+  fetch("/api/client-heartbeat", {
+    method: "POST",
+  }).catch(() => {});
+}
+
 function handleServiceWorkerMessage(event) {
   if (event.data?.type !== "START_SLOW") {
     return;
@@ -540,6 +551,13 @@ function startNotificationScheduler() {
     }
   });
   startDueSlow();
+}
+
+function startClientHeartbeat() {
+  window.clearInterval(state.heartbeatTimer);
+  sendClientHeartbeat();
+  state.heartbeatTimer = window.setInterval(sendClientHeartbeat, 15000);
+  document.addEventListener("visibilitychange", sendClientHeartbeat);
 }
 
 function runProgress() {
@@ -684,4 +702,5 @@ if (state.onboarded) {
 updateNotificationStatus();
 bootNotifications();
 startNotificationScheduler();
+startClientHeartbeat();
 syncPushReminders();

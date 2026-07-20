@@ -157,6 +157,8 @@ window.SLOW_INDEX_CONFIG.pushPublicKey = "YOUR_VAPID_PUBLIC_KEY";
 
 Web Push通知をクリックすると、既存のSlow Indexタブを前面に戻すか、新しく開いてMicro Slowを開始します。
 
+Slow Indexのページが開いている間は、Pushサーバーにハートビートを送り、サーバー側のPush通知を抑止します。そのため、ページ表示中は通知ではなく画面内でMicro Slowが直接始まります。
+
 通知を使う場合は、以下のどちらかで開いてください。
 
 ```text
@@ -169,6 +171,8 @@ http://localhost:8000/
 通知が来ない場合は、設定画面の「テスト通知」を押してOSの通知欄に出るか確認してください。出ない場合は、ブラウザまたはOS側でSlow Indexの通知がブロックされています。
 
 Web Push通知はPushサーバーが起動している間だけ送られます。予定はページを開いたとき、Google Calendarを読み込んだとき、または手入力予定を追加したときにPushサーバーへ登録されます。
+
+Chrome自体を完全に終了した状態で通知が届くかは、OSとChromeのバックグラウンド実行設定に依存します。Chromeの設定で「Google Chrome を閉じた際にバックグラウンド アプリの処理を続行する」が無効だと、ブラウザ終了中のPush通知は届かない場合があります。
 
 ## 初期版でやっていないこと
 

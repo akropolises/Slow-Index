@@ -19,7 +19,7 @@ const state = {
   schedulerTimer: null,
   startedAt: 0,
   view: null,
-  autoStarted: new Set(),
+  notified: new Set(),
   settings: {
     maxSuggestions: 3,
     maxDuration: 60,
@@ -41,6 +41,8 @@ const googleConnect = document.querySelector("#googleConnect");
 const googleStatus = document.querySelector("#googleStatus");
 const onboardingStatus = document.querySelector("#onboardingStatus");
 const progressRing = document.querySelector("#progressRing");
+const notificationButton = document.querySelector("#notificationButton");
+const notificationStatus = document.querySelector("#notificationStatus");
 
 function readRecentSlowIds() {
   try {
@@ -207,7 +209,7 @@ function renderHome() {
         <span class="event-subtext">${proposal.slowStart} から ${Math.min(proposal.slow.seconds, state.settings.maxDuration)}秒</span>
       </button>
       <div class="event-side">
-        <span class="event-badge">${proposal.hasSpace ? "自動開始" : "余白少"}</span>
+        <span class="event-badge">${proposal.hasSpace ? "通知" : "余白少"}</span>
         <button class="dismiss-event" data-action="dismiss" data-id="${proposal.id}" type="button" aria-label="${proposal.event.title}のMicro Slowを今回はしない">×</button>
       </div>
     `;
@@ -218,8 +220,8 @@ function renderHome() {
 function startSlow(proposalId, options = {}) {
   const proposal = state.events.map(buildProposalForEvent).find((item) => item.id === proposalId);
   if (!proposal) return;
-  if (options.automatic) {
-    state.autoStarted.add(proposal.id);
+  if (options.fromNotification) {
+    state.notified.add(proposal.id);
   }
 
   state.currentProposal = proposal;
@@ -235,7 +237,65 @@ function startSlow(proposalId, options = {}) {
   runProgress();
 }
 
-function getDueAutoProposal(minutes = nowMinutes()) {
+function isNotificationSupported() {
+  return "Notification" in window;
+}
+
+function updateNotificationStatus() {
+  if (!isNotificationSupported()) {
+    notificationButton.disabled = true;
+    notificationStatus.textContent = "このブラウザは通知に対応していません。";
+    return;
+  }
+
+  if (Notification.permission === "granted") {
+    notificationButton.textContent = "通知は許可済み";
+    notificationStatus.textContent = "予定5分前に通知します。通知をクリックするとMicro Slowを開始します。";
+    return;
+  }
+
+  if (Notification.permission === "denied") {
+    notificationButton.textContent = "通知はブロック中";
+    notificationStatus.textContent = "ブラウザまたはOSの設定からSlow Indexの通知を許可してください。";
+    return;
+  }
+
+  notificationButton.textContent = "通知を許可";
+  notificationStatus.textContent = "通知を許可すると、予定5分前にMicro Slowを知らせます。";
+}
+
+async function requestNotificationPermission() {
+  if (!isNotificationSupported()) {
+    updateNotificationStatus();
+    return;
+  }
+
+  await Notification.requestPermission();
+  updateNotificationStatus();
+}
+
+function showSlowNotification(proposal) {
+  if (!isNotificationSupported() || Notification.permission !== "granted") {
+    return false;
+  }
+
+  const seconds = Math.min(proposal.slow.seconds, state.settings.maxDuration);
+  const notification = new Notification("Micro Slowの時間です", {
+    body: `${proposal.event.title}の前に、${seconds}秒だけ整えます。`,
+    tag: `slow-index-${proposal.id}`,
+    renotify: false,
+  });
+
+  notification.onclick = () => {
+    window.focus();
+    notification.close();
+    startSlow(proposal.id, { fromNotification: true });
+  };
+
+  return true;
+}
+
+function getDueNotificationProposal(minutes = nowMinutes()) {
   if (!state.onboarded || state.view === "onboarding" || state.view === "slow" || state.view === "transition") {
     return null;
   }
@@ -250,7 +310,7 @@ function getDueAutoProposal(minutes = nowMinutes()) {
       return (
         proposal.hasSpace &&
         !state.dismissed.has(proposal.id) &&
-        !state.autoStarted.has(proposal.id) &&
+        !state.notified.has(proposal.id) &&
         proposal.slowStartMinutes <= minutes &&
         minutes < proposal.eventStartMinutes
       );
@@ -258,8 +318,8 @@ function getDueAutoProposal(minutes = nowMinutes()) {
     .sort((a, b) => a.eventStartMinutes - b.eventStartMinutes)[0] || null;
 }
 
-function startDueAutoSlow() {
-  const proposal = getDueAutoProposal();
+function notifyDueSlow() {
+  const proposal = getDueNotificationProposal();
   if (!proposal) {
     if (state.view === "home") {
       renderHome();
@@ -267,18 +327,21 @@ function startDueAutoSlow() {
     return;
   }
 
-  startSlow(proposal.id, { automatic: true });
+  state.notified.add(proposal.id);
+  if (!showSlowNotification(proposal) && state.view === "home") {
+    renderHome();
+  }
 }
 
-function startAutoScheduler() {
+function startNotificationScheduler() {
   window.clearInterval(state.schedulerTimer);
-  state.schedulerTimer = window.setInterval(startDueAutoSlow, 15000);
+  state.schedulerTimer = window.setInterval(notifyDueSlow, 15000);
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) {
-      startDueAutoSlow();
+      notifyDueSlow();
     }
   });
-  startDueAutoSlow();
+  notifyDueSlow();
 }
 
 function runProgress() {
@@ -352,7 +415,7 @@ async function loadGoogleEvents() {
     const events = await window.SlowIndexGoogleCalendar.listTodayEvents();
     state.events = events;
     state.dismissed.clear();
-    state.autoStarted.clear();
+    state.notified.clear();
     googleStatus.textContent = `${events.length}件の予定を読み込みました。`;
     completeOnboarding("google");
     renderHome();
@@ -375,6 +438,7 @@ document.querySelector("#googleConnectButton").addEventListener("click", loadGoo
 document.querySelector("#onboardingGoogleButton").addEventListener("click", loadGoogleEvents);
 document.querySelector("#onboardingDemoButton").addEventListener("click", () => completeOnboarding("sample"));
 document.querySelector("#settingsButton").addEventListener("click", () => showView("settings"));
+notificationButton.addEventListener("click", requestNotificationPermission);
 document.querySelector("#saveSettingsButton").addEventListener("click", () => {
   state.settings.maxSuggestions = Number(document.querySelector("#maxSuggestionsInput").value);
   state.settings.maxDuration = Number(document.querySelector("#maxDurationInput").value);
@@ -388,7 +452,7 @@ document.querySelectorAll(".toggle-button").forEach((button) => {
     if (state.source === "sample") {
       state.events = [...sampleEvents];
       state.dismissed.clear();
-      state.autoStarted.clear();
+      state.notified.clear();
       renderHome();
     }
   });
@@ -412,4 +476,5 @@ if (state.onboarded) {
 } else {
   showView("onboarding");
 }
-startAutoScheduler();
+updateNotificationStatus();
+startNotificationScheduler();

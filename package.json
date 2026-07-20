@@ -1,6 +1,6 @@
 {
   "scripts": {
     "start": "node dev-server.js",
-    "check": "node --check app.js && node --check google-calendar.js && node --check micro-slows.js && node --check dev-server.js"
+    "check": "node --check app.js && node --check google-calendar.js && node --check micro-slows.js && node --check dev-server.js && node --check sw.js"
   }
 }

@@ -17,6 +17,7 @@ const state = {
   currentSlow: null,
   timer: null,
   schedulerTimer: null,
+  serviceWorkerRegistration: null,
   startedAt: 0,
   view: null,
   notified: new Set(),
@@ -250,7 +251,7 @@ function updateNotificationStatus() {
 
   if (Notification.permission === "granted") {
     notificationButton.textContent = "通知は許可済み";
-    notificationStatus.textContent = "予定5分前に通知します。通知をクリックするとMicro Slowを開始します。";
+    notificationStatus.textContent = "予定5分前に通知します。通知をクリックするとSlow Indexを開いてMicro Slowを開始します。";
     return;
   }
 
@@ -274,23 +275,61 @@ async function requestNotificationPermission() {
   updateNotificationStatus();
 }
 
-function showSlowNotification(proposal) {
+async function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) {
+    return null;
+  }
+
+  try {
+    state.serviceWorkerRegistration = await navigator.serviceWorker.register("sw.js");
+    return state.serviceWorkerRegistration;
+  } catch (error) {
+    console.error("Service Worker registration failed.", error);
+    return null;
+  }
+}
+
+async function getServiceWorkerRegistration() {
+  if (state.serviceWorkerRegistration) {
+    return state.serviceWorkerRegistration;
+  }
+
+  if (!("serviceWorker" in navigator)) {
+    return null;
+  }
+
+  state.serviceWorkerRegistration = await navigator.serviceWorker.ready;
+  return state.serviceWorkerRegistration;
+}
+
+function handleServiceWorkerMessage(event) {
+  if (event.data?.type !== "START_SLOW") {
+    return;
+  }
+
+  startSlow(event.data.proposalId, { fromNotification: true });
+}
+
+async function showSlowNotification(proposal) {
   if (!isNotificationSupported() || Notification.permission !== "granted") {
     return false;
   }
 
+  const registration = await getServiceWorkerRegistration();
+  if (!registration) {
+    return false;
+  }
+
   const seconds = Math.min(proposal.slow.seconds, state.settings.maxDuration);
-  const notification = new Notification("Micro Slowの時間です", {
+  await registration.showNotification("Micro Slowの時間です", {
     body: `${proposal.event.title}の前に、${seconds}秒だけ整えます。`,
     tag: `slow-index-${proposal.id}`,
     renotify: false,
+    data: {
+      proposalId: proposal.id,
+      url: location.href,
+    },
   });
-
-  notification.onclick = () => {
-    window.focus();
-    notification.close();
-    startSlow(proposal.id, { fromNotification: true });
-  };
 
   return true;
 }
@@ -327,10 +366,40 @@ function notifyDueSlow() {
     return;
   }
 
-  state.notified.add(proposal.id);
-  if (!showSlowNotification(proposal) && state.view === "home") {
-    renderHome();
+  showSlowNotification(proposal).then((shown) => {
+    if (shown) {
+      state.notified.add(proposal.id);
+      return;
+    }
+
+    if (state.view === "home") {
+      renderHome();
+    }
+  });
+}
+
+function handleStartupRequest() {
+  const params = new URLSearchParams(window.location.search);
+  const proposalId = params.get("startSlow");
+  if (!proposalId) {
+    return;
   }
+
+  window.history.replaceState({}, "", window.location.pathname);
+  window.setTimeout(() => {
+    startSlow(proposalId, { fromNotification: true });
+  }, 100);
+}
+
+function bootNotifications() {
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.addEventListener("message", handleServiceWorkerMessage);
+  }
+
+  registerServiceWorker().then(() => {
+    handleStartupRequest();
+    renderHome();
+  });
 }
 
 function startNotificationScheduler() {
@@ -477,4 +546,5 @@ if (state.onboarded) {
   showView("onboarding");
 }
 updateNotificationStatus();
+bootNotifications();
 startNotificationScheduler();

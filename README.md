@@ -49,8 +49,8 @@ Copy-Item config.example.js config.local.js
 - 手入力による予定追加
 - カレンダー風タイムラインから予定を選んでMicro Slowを開始
 - 予定5分前のMicro Slow候補表示
-- 予定5分前になったときのブラウザ通知
-- 通知クリックからのMicro Slow開始
+- 予定5分前になったときのService Worker経由のブラウザ通知
+- 通知クリックからSlow Indexを開いてMicro Slow開始
 - 現在予定がなく、もうすぐ始まる予定がある場合のMicro Slow提案
 - 「今回はしない」の除外操作
 - 18種類のMicro Slow体験
@@ -105,6 +105,8 @@ http://<PCのIPアドレス>:8000
 - `styles.css`: UIスタイルとMicro Slow中の視覚表現
 - `micro-slows.js`: アプリが読み込むMicro Slowデータ
 - `app.js`: 予定管理、提案生成、Micro Slow実行ロジック
+- `sw.js`: 通知クリック時の復帰処理
+- `manifest.webmanifest`: PWAメタデータ
 - `config.js`: 共有用の既定設定
 - `config.example.js`: 個人設定ファイルのひな形
 - `CONTRIBUTING.md`: 複数人開発の手順
@@ -120,6 +122,14 @@ http://<PCのIPアドレス>:8000
 このプロトタイプでは、Slownessを単なる遅さではなく、自己のリズムと周囲とのズレが少ない状態として扱います。
 
 Micro Slowは、予定の前に短い感覚体験を置くことで、焦りや通知反応から一時的に離れ、現在の身体感覚へ戻るための入口です。
+
+## 通知の制約
+
+現在の通知は、Slow Indexのページが開かれている間に予定5分前を検知し、Service Worker経由でブラウザ通知を出します。
+
+通知をクリックすると、既存のSlow Indexタブを前面に戻すか、新しく開いてMicro Slowを開始します。
+
+ブラウザを完全に閉じた状態や、ページが一度も開かれていない状態で通知するには、PushサーバーとVAPID鍵を使うWeb Push実装が別途必要です。
 
 ## 初期版でやっていないこと
 

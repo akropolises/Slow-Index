@@ -24,8 +24,8 @@ Slow Indexは、Fastな生活リズムを持つ人に対して、生活や予定
 1. ユーザーがカレンダー連携を許可する。
 2. アプリが当日の予定を読み込む。
 3. 現在予定がなく、近い予定がある場合、30秒から3分のMicro Slowを提案する。
-4. ページを開いている場合、予定5分前にMicro Slowを直接開始する。
-5. ページを閉じている場合、Web Push通知からSlow Indexを開いてMicro Slowを開始できる。
+4. アプリが起動している場合、予定5分前にMicro Slowを直接開始する。
+5. ウィンドウを閉じている場合も、常駐プロセスがSlow Indexを前面表示してMicro Slowを開始できる。
 6. ユーザーはカレンダー上の予定を選び、Micro Slowを手動開始できる。
 7. Micro Slow中は、短く具体的な感覚体験だけを提示する。
 8. 満足した時点で終了できる。
@@ -82,17 +82,12 @@ Slow Indexは、Fastな生活リズムを持つ人に対して、生活や予定
 - ユーザーはいつでも終了できる。
 - 終了ボタンは常に見える位置に置く。
 
-### 6. 通知設計
-- 通知はMicro Slow開始のきっかけに限定する。
-- 通知文は短く、煽らない。
-- 通知をタップした後は、通知一覧や他のアプリに意識が戻りにくい全画面体験へ移る。
-- Micro Slow中は追加通知を出さない。
-- 通知反応を強めないため、連続通知やリマインド連打は禁止する。
+### 6. 自動開始設計
+- Micro Slowの開始は、OS通知ではなくElectronの常駐プロセスで扱う。
+- 予定5分前になったら、ウィンドウを前面表示してMicro Slowを直接開始する。
+- Micro Slow中は同じ予定で二重開始しない。
+- 連続した前面表示やリマインド連打は禁止する。
 - 再通知は初期実装では行わない。
-- ページを開いている場合は通知ではなくMicro Slowを直接開始する。
-- Web Push通知が届いた場合でも、既にMicro Slowが始まっているときは二重開始しない。
-- ブラウザ終了中の通知は、OSとブラウザのバックグラウンド実行設定に依存する。
-- Electron版では通知ではなく、常駐プロセスが予定時刻にウィンドウを前面表示してMicro Slowを開始する。
 - Electron版ではGoogle OAuthをmain processで実行し、外部ブラウザとlocalhost callbackで認可を完了する。
 
 ### 7. 終了後の移行
@@ -108,8 +103,8 @@ Slow Indexは、Fastな生活リズムを持つ人に対して、生活や予定
 - カレンダー情報は最小限だけ扱う。
 - 予定タイトルはMicro Slowの提案判定には使わない。
 - Google Calendar連携では予定タイトル、開始時刻、終了時刻のみを扱う。
-- Web Push利用時は、通知配信のためにPush購読情報と予定前リマインダーをローカルPushサーバーへ登録する。
-- 個人のOAuth Client ID、VAPID Private Key、Push購読保存ファイルはGit管理しない。
+- OAuth tokenはElectronのuserDataディレクトリに保存し、プロジェクトフォルダには保存しない。
+- 個人のOAuth Client SecretはGit管理しない。
 
 ### 2. 操作負荷
 - 初回設定後、Micro Slow開始までの操作は最小限にする。
@@ -136,9 +131,8 @@ Slow Indexは、Fastな生活リズムを持つ人に対して、生活や予定
 - カレンダー連携のオン・オフ
 - 1日の最大提案回数
 - Micro Slowの最大時間
-- 通知許可
 - Google OAuth Client ID
-- VAPID Public Key
+- Google OAuth Client Secret
 
 ## 初期実装でやらないこと
 - ユーザータイプの分類
@@ -147,16 +141,13 @@ Slow Indexは、Fastな生活リズムを持つ人に対して、生活や予定
 - スコア、ランキング、連続記録
 - 展示用の評価設計
 - FastnessとSlownessの哲学的説明をアプリ内で長く提示すること
-- Pushサーバーのクラウド常時稼働
 - Google Calendarへの予定作成・編集
 - Electron版のインストーラー化、コード署名、OS起動時の自動起動設定UI
 
 ## 現在の実装判断
-- Google Calendar連携はWebアプリで行う。
-- 通知はService WorkerとWeb Pushで扱う。
-- 通知なしの前面表示体験はElectron版で検証する。
-- Electron版のGoogle Calendar連携はmain processでOAuthとCalendar API読み込みを行う。
-- Electron版ではGoogle Calendar表示中に更新ボタンで再同期し、1時間ごとにも自動同期する。
+- Google Calendar連携はElectron main processでOAuthとCalendar API読み込みを行う。
+- Google Calendar表示中は更新ボタンで再同期し、1時間ごとにも自動同期する。
+- Micro Slowの自動開始はElectron main processの常駐処理で扱う。
 - Micro Slowの体験表現はHTML/CSS中心で実装する。
 - カレンダー予定の作成・編集は行わない。
 - 感覚入力は任意の色選択として残す。
@@ -168,9 +159,8 @@ MVPでは以下を満たせばよい。
 - Google Calendarまたはダミーカレンダーから予定を読み込める。
 - 予定5分前のMicro Slow候補を生成できる。
 - ユーザーがMicro Slowを開始・終了できる。
-- ページを開いている場合は予定5分前にMicro Slowを自動開始できる。
-- ページを閉じている場合はWeb Push通知からMicro Slowへ戻れる。
-- Electron版では常駐中に予定5分前のウィンドウ前面表示ができる。
+- アプリ起動中は予定5分前にMicro Slowを自動開始できる。
+- ウィンドウを閉じている場合も、常駐中に予定5分前のウィンドウ前面表示ができる。
 - 18種類のMicro Slowを、直近履歴を避けながら表示できる。
 - 数字に依存しない進行表示がある。
 - 終了後、次の予定へ戻る短い移行画面がある。

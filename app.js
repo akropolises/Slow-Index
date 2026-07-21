@@ -18,7 +18,6 @@ const state = {
   timer: null,
   schedulerTimer: null,
   googleSyncTimer: null,
-  serviceWorkerRegistration: null,
   startedAt: 0,
   view: null,
   startedAutomatically: new Set(),
@@ -43,9 +42,6 @@ const googleConnect = document.querySelector("#googleConnect");
 const googleStatus = document.querySelector("#googleStatus");
 const onboardingStatus = document.querySelector("#onboardingStatus");
 const progressRing = document.querySelector("#progressRing");
-const notificationButton = document.querySelector("#notificationButton");
-const testNotificationButton = document.querySelector("#testNotificationButton");
-const notificationStatus = document.querySelector("#notificationStatus");
 
 function readRecentSlowIds() {
   try {
@@ -245,7 +241,7 @@ function renderHome() {
 function startSlow(proposalId, options = {}) {
   const proposal = state.events.map(buildProposalForEvent).find((item) => item.id === proposalId);
   if (!proposal) return;
-  if (options.fromNotification) {
+  if (options.fromExternalTrigger) {
     state.startedAutomatically.add(proposal.id);
   }
 
@@ -262,7 +258,7 @@ function startSlow(proposalId, options = {}) {
   runProgress();
 }
 
-function startSlowFromNotification(proposalId) {
+function startSlowFromExternalTrigger(proposalId) {
   if (state.view === "slow" || state.view === "transition") {
     return;
   }
@@ -271,168 +267,10 @@ function startSlowFromNotification(proposalId) {
     return;
   }
 
-  startSlow(proposalId, { fromNotification: true });
+  startSlow(proposalId, { fromExternalTrigger: true });
 }
 
-function isNotificationSupported() {
-  return "Notification" in window;
-}
-
-function updateNotificationStatus() {
-  if (window.SlowIndexElectron?.isElectron) {
-    notificationButton.disabled = true;
-    testNotificationButton.disabled = true;
-    notificationStatus.textContent = "Electron版では通知ではなく、時刻になるとウィンドウを前面に表示します。";
-    return;
-  }
-
-  const serviceWorkerReady = "serviceWorker" in navigator;
-  const secureReady = window.isSecureContext;
-
-  if (!isNotificationSupported()) {
-    notificationButton.disabled = true;
-    testNotificationButton.disabled = true;
-    notificationStatus.textContent = "このブラウザは通知に対応していません。";
-    return;
-  }
-
-  if (!secureReady || !serviceWorkerReady) {
-    notificationButton.disabled = true;
-    testNotificationButton.disabled = true;
-    notificationStatus.textContent =
-      "通知にはlocalhostまたはHTTPSでの起動が必要です。http://127.0.0.1:8000/ か http://localhost:8000/ で開いてください。";
-    return;
-  }
-
-  notificationButton.disabled = false;
-  testNotificationButton.disabled = Notification.permission !== "granted";
-
-  if (Notification.permission === "granted") {
-    notificationButton.textContent = "通知は許可済み";
-    notificationStatus.textContent = "予定5分前に通知します。通知をクリックするとSlow Indexを開いてMicro Slowを開始します。";
-    return;
-  }
-
-  if (Notification.permission === "denied") {
-    notificationButton.textContent = "通知はブロック中";
-    notificationStatus.textContent = "ブラウザまたはOSの設定からSlow Indexの通知を許可してください。";
-    return;
-  }
-
-  notificationButton.textContent = "通知を許可";
-  notificationStatus.textContent = "通知を許可すると、予定5分前にMicro Slowを知らせます。";
-}
-
-async function requestNotificationPermission() {
-  if (!isNotificationSupported()) {
-    updateNotificationStatus();
-    return;
-  }
-
-  const permission = await Notification.requestPermission();
-  if (permission === "granted") {
-    await subscribeToWebPush();
-    syncReminderBackends();
-  }
-  updateNotificationStatus();
-}
-
-function getFirstAvailableProposal() {
-  return state.events
-    .map(buildProposalForEvent)
-    .find((proposal) => proposal.hasSpace && !state.dismissed.has(proposal.id));
-}
-
-async function sendTestNotification() {
-  if (!isNotificationSupported()) {
-    updateNotificationStatus();
-    return;
-  }
-
-  if (Notification.permission !== "granted") {
-    await requestNotificationPermission();
-  }
-
-  const proposal = getFirstAvailableProposal();
-  if (!proposal) {
-    notificationStatus.textContent = "通知テストに使える予定がありません。手入力で予定を追加してください。";
-    return;
-  }
-
-  const shown = await showSlowNotification(proposal, {
-    title: "Slow Indexのテスト通知",
-    body: "通知をクリックするとMicro Slowを開始します。",
-    tag: "slow-index-test",
-  });
-
-  notificationStatus.textContent = shown
-    ? "テスト通知を送信しました。OSの通知欄を確認してください。"
-    : "通知を送信できませんでした。ブラウザの通知設定とService Workerの状態を確認してください。";
-}
-
-async function registerServiceWorker() {
-  if (!("serviceWorker" in navigator)) {
-    return null;
-  }
-
-  try {
-    state.serviceWorkerRegistration = await navigator.serviceWorker.register("sw.js");
-    updateNotificationStatus();
-    return state.serviceWorkerRegistration;
-  } catch (error) {
-    console.error("Service Worker registration failed.", error);
-    notificationStatus.textContent = "Service Workerを登録できませんでした。起動URLとブラウザ設定を確認してください。";
-    return null;
-  }
-}
-
-async function getServiceWorkerRegistration() {
-  if (state.serviceWorkerRegistration) {
-    return state.serviceWorkerRegistration;
-  }
-
-  if (!("serviceWorker" in navigator)) {
-    return null;
-  }
-
-  state.serviceWorkerRegistration = await navigator.serviceWorker.ready;
-  return state.serviceWorkerRegistration;
-}
-
-function urlBase64ToUint8Array(value) {
-  const padding = "=".repeat((4 - (value.length % 4)) % 4);
-  const base64 = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const raw = window.atob(base64);
-  return Uint8Array.from([...raw].map((character) => character.charCodeAt(0)));
-}
-
-async function subscribeToWebPush() {
-  const publicKey = window.SLOW_INDEX_CONFIG?.pushPublicKey;
-  if (!publicKey || !("PushManager" in window)) {
-    return false;
-  }
-
-  const registration = await getServiceWorkerRegistration();
-  if (!registration) {
-    return false;
-  }
-
-  const subscription =
-    (await registration.pushManager.getSubscription()) ||
-    (await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicKey),
-    }));
-
-  await fetch("/api/push/subscribe", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(subscription),
-  });
-  return true;
-}
-
-function buildPushReminders() {
+function buildDesktopReminders() {
   const now = Date.now();
   return state.events
     .map(buildProposalForEvent)
@@ -445,78 +283,23 @@ function buildPushReminders() {
         eventTitle: proposal.event.title,
         seconds: Math.min(proposal.slow.seconds, state.settings.maxDuration),
         dueAt: dueAt.toISOString(),
-        url: location.href,
       };
     })
     .filter((reminder) => new Date(reminder.dueAt).getTime() > now);
 }
 
 function syncDesktopReminders() {
-  if (!window.SlowIndexElectron?.isElectron) {
+  if (!window.SlowIndexElectron?.setReminders) {
     return;
   }
 
-  window.SlowIndexElectron.setReminders(buildPushReminders()).catch((error) => {
+  window.SlowIndexElectron.setReminders(buildDesktopReminders()).catch((error) => {
     console.error("Desktop reminder sync failed.", error);
   });
 }
 
-async function syncPushReminders() {
-  if (window.SlowIndexElectron?.isElectron) {
-    return;
-  }
-
-  if (!isNotificationSupported() || Notification.permission !== "granted" || !window.SLOW_INDEX_CONFIG?.pushPublicKey) {
-    return;
-  }
-
-  try {
-    await subscribeToWebPush();
-    await fetch("/api/push/reminders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reminders: buildPushReminders() }),
-    });
-  } catch (error) {
-    console.error("Push reminder sync failed.", error);
-  }
-}
-
 function syncReminderBackends() {
   syncDesktopReminders();
-  syncPushReminders();
-}
-
-function handleServiceWorkerMessage(event) {
-  if (event.data?.type !== "START_SLOW") {
-    return;
-  }
-
-  startSlowFromNotification(event.data.proposalId);
-}
-
-async function showSlowNotification(proposal, overrides = {}) {
-  if (!isNotificationSupported() || Notification.permission !== "granted") {
-    return false;
-  }
-
-  const registration = await getServiceWorkerRegistration();
-  if (!registration) {
-    return false;
-  }
-
-  const seconds = Math.min(proposal.slow.seconds, state.settings.maxDuration);
-  await registration.showNotification(overrides.title || "Micro Slowの時間です", {
-    body: overrides.body || `${proposal.event.title}の前に、${seconds}秒だけ整えます。`,
-    tag: overrides.tag || `slow-index-${proposal.id}`,
-    renotify: false,
-    data: {
-      proposalId: proposal.id,
-      url: location.href,
-    },
-  });
-
-  return true;
 }
 
 function getDueStartProposal(minutes = nowMinutes()) {
@@ -555,38 +338,11 @@ function startDueSlow() {
   startSlow(proposal.id);
 }
 
-function handleStartupRequest() {
-  const params = new URLSearchParams(window.location.search);
-  const proposalId = params.get("startSlow");
-  if (!proposalId) {
-    return;
-  }
-
-  window.history.replaceState({}, "", window.location.pathname);
-  window.setTimeout(() => {
-    startSlowFromNotification(proposalId);
-  }, 100);
+function bootDesktopRuntime() {
+  renderHome();
 }
 
-function bootNotifications() {
-  if (window.SlowIndexElectron?.isElectron) {
-    handleStartupRequest();
-    renderHome();
-    return;
-  }
-
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.addEventListener("message", handleServiceWorkerMessage);
-  }
-
-  registerServiceWorker().then(() => {
-    updateNotificationStatus();
-    handleStartupRequest();
-    renderHome();
-  });
-}
-
-function startNotificationScheduler() {
+function startAutoStartScheduler() {
   window.clearInterval(state.schedulerTimer);
   state.schedulerTimer = window.setInterval(startDueSlow, 15000);
   document.addEventListener("visibilitychange", () => {
@@ -680,41 +436,18 @@ function addManualEvent(event) {
 }
 
 async function loadGoogleEvents() {
-  if (window.SlowIndexElectron?.isElectron) {
-    googleStatus.textContent = "Google Calendarを読み込んでいます。";
-    onboardingStatus.classList.add("hidden");
-    try {
-      const events = await window.SlowIndexElectron.loadGoogleEvents({
-        googleClientId: window.SLOW_INDEX_CONFIG?.googleClientId,
-        googleClientSecret: window.SLOW_INDEX_CONFIG?.googleClientSecret,
-        googleCalendarId: window.SLOW_INDEX_CONFIG?.googleCalendarId || "primary",
-      });
-      replaceEventsFromGoogle(events);
-      googleStatus.textContent = `${events.length}件の予定を読み込みました。`;
-      if (!state.onboarded) {
-        completeOnboarding("google");
-      }
-      renderHome();
-    } catch (error) {
-      const detail = error?.message ? ` ${error.message}` : "";
-      googleStatus.textContent = `Google Calendarを読み込めませんでした。${detail}`;
-      onboardingStatus.textContent = `Google Calendarを読み込めませんでした。${detail}`;
-      onboardingStatus.classList.remove("hidden");
-      console.error(error);
-    }
-    return;
-  }
-
-  if (!window.SlowIndexGoogleCalendar?.isConfigured()) {
-    googleStatus.textContent = "config.js に Google OAuth Client ID を設定してください。";
-    onboardingStatus.classList.remove("hidden");
-    return;
-  }
-
   googleStatus.textContent = "Google Calendarを読み込んでいます。";
   onboardingStatus.classList.add("hidden");
   try {
-    const events = await window.SlowIndexGoogleCalendar.listTodayEvents();
+    if (!window.SlowIndexElectron?.loadGoogleEvents) {
+      throw new Error("Electron Google Calendar bridge is not available.");
+    }
+
+    const events = await window.SlowIndexElectron.loadGoogleEvents({
+      googleClientId: window.SLOW_INDEX_CONFIG?.googleClientId,
+      googleClientSecret: window.SLOW_INDEX_CONFIG?.googleClientSecret,
+      googleCalendarId: window.SLOW_INDEX_CONFIG?.googleCalendarId || "primary",
+    });
     replaceEventsFromGoogle(events);
     googleStatus.textContent = `${events.length}件の予定を読み込みました。`;
     if (!state.onboarded) {
@@ -722,8 +455,9 @@ async function loadGoogleEvents() {
     }
     renderHome();
   } catch (error) {
-    googleStatus.textContent = "Google Calendarを読み込めませんでした。設定と許可を確認してください。";
-    onboardingStatus.textContent = "Google Calendarを読み込めませんでした。設定と許可を確認してください。";
+    const detail = error?.message ? ` ${error.message}` : "";
+    googleStatus.textContent = `Google Calendarを読み込めませんでした。${detail}`;
+    onboardingStatus.textContent = `Google Calendarを読み込めませんでした。${detail}`;
     onboardingStatus.classList.remove("hidden");
     console.error(error);
   }
@@ -740,8 +474,6 @@ document.querySelector("#googleConnectButton").addEventListener("click", loadGoo
 document.querySelector("#onboardingGoogleButton").addEventListener("click", loadGoogleEvents);
 document.querySelector("#onboardingDemoButton").addEventListener("click", () => completeOnboarding("sample"));
 document.querySelector("#settingsButton").addEventListener("click", () => showView("settings"));
-notificationButton.addEventListener("click", requestNotificationPermission);
-testNotificationButton.addEventListener("click", sendTestNotification);
 document.querySelector("#saveSettingsButton").addEventListener("click", () => {
   state.settings.maxSuggestions = Number(document.querySelector("#maxSuggestionsInput").value);
   state.settings.maxDuration = Number(document.querySelector("#maxDurationInput").value);
@@ -782,11 +514,10 @@ if (state.onboarded) {
 } else {
   showView("onboarding");
 }
-updateNotificationStatus();
-bootNotifications();
-startNotificationScheduler();
+bootDesktopRuntime();
+startAutoStartScheduler();
 startGoogleAutoSync();
 if (window.SlowIndexElectron?.isElectron) {
-  window.SlowIndexElectron.onStartSlow(startSlowFromNotification);
+  window.SlowIndexElectron.onStartSlow(startSlowFromExternalTrigger);
 }
 syncReminderBackends();

@@ -1,8 +1,0 @@
-{
-  "name": "Slow Index",
-  "short_name": "Slow Index",
-  "start_url": ".",
-  "display": "standalone",
-  "background_color": "#fffdf8",
-  "theme_color": "#2e6f65"
-}

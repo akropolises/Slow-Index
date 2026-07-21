@@ -4,7 +4,6 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Slow Index</title>
-    <link rel="manifest" href="manifest.webmanifest">
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
@@ -125,26 +124,14 @@
               <option value="180">3分</option>
             </select>
           </label>
-          <label class="setting-line">
-            <span>予定前の通知</span>
-            <button class="secondary-button" id="notificationButton" type="button">通知を許可</button>
-          </label>
-          <label class="setting-line">
-            <span>通知テスト</span>
-            <button class="secondary-button" id="testNotificationButton" type="button">テスト通知</button>
-          </label>
-          <p class="setup-note" id="notificationStatus">通知を許可すると、予定5分前にMicro Slowを知らせます。</p>
           <button class="primary-button" id="saveSettingsButton" type="button">保存</button>
         </section>
       </main>
     </div>
 
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="https://apis.google.com/js/api.js"></script>
     <script src="config.js"></script>
     <script src="config.local.js"></script>
     <script src="micro-slows.js"></script>
-    <script src="google-calendar.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

@@ -44,6 +44,8 @@ The shared Google OAuth Client ID lives in `config.js`.
 
 Create one branch per topic. Avoid mixing UI changes, Google Calendar changes, desktop behavior, and concept-document edits unless they are tightly connected.
 
+Android work should start from a separate Capacitor-focused branch, normally `feature/android-capacitor`. Keep it separate from Windows Electron packaging and desktop behavior changes because the Android version will replace Electron main/preload responsibilities with Capacitor-side auth, notification, storage, and background behavior.
+
 ## Before Opening a Pull Request
 
 Run:
@@ -64,6 +66,8 @@ For a local verification build that includes ignored `config.local.js` in the zi
 npm run make:local
 ```
 
+Use `npm run make:local` only for local verification builds that intentionally include the Google OAuth Client Secret. Do not publish, share, or upload build artifacts produced this way.
+
 Then manually verify the path you touched:
 
 - Google onboarding
@@ -81,6 +85,7 @@ Then manually verify the path you touched:
 
 - No personal values in committed files.
 - No Google OAuth Client Secret in Git.
+- Secret-bearing local build artifacts are not published or shared.
 - Japanese text renders correctly as UTF-8.
 - `micro-slows.js` remains the source of truth for runtime Micro Slow data.
 - `micro-slows.md` is updated when Micro Slow content changes.

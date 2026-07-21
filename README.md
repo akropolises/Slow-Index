@@ -101,6 +101,24 @@ npm run make:local
 
 複数人で開発する場合は、最初に `CONTRIBUTING.md` を確認してください。
 
+## 配布ターゲット方針
+
+現在の配布物はWindows向けzipのみです。
+
+macOS向けのElectron配布物は、署名やnotarizationまで含めてmacOS上でビルドする方針です。Windows環境からのクロスビルドは当面の標準手順にしません。
+
+Android版は、既存のHTML/CSS/JavaScript rendererを活かしやすいCapacitor版から着手します。Electron固有の `electron-main.js` / `electron-preload.js` はAndroidでは使えないため、Google認証、通知、ローカル保存、バックグラウンド起動相当の処理はCapacitor側の実装に置き換えます。
+
+Android対応はElectronデスクトップ版とはブランチを分けて進めます。作業ブランチ名は `feature/android-capacitor` を基本とし、Windows配布物の保守やElectron固有の変更と混ぜないようにします。
+
+## Secretの扱い
+
+Google OAuth Client SecretはGitにコミットしません。ローカルでは `.gitignore` 済みの `config.local.js` にだけ置きます。
+
+通常のWindows配布物を作る `npm run make` では、`config.local.js` は成果物に含めません。ローカル検証など、Secretを含めたbuildが必要な場合だけ `npm run make:local` を使います。この成果物にはSecretが入るため、公開配布、共有、アップロードには使いません。
+
+Android版でも同じ方針を維持します。Secretや個人設定はGit管理対象にせず、Capacitor版で必要になる認証情報の注入方法はAndroidブランチ側のドキュメントに明記します。
+
 ## Micro Slowの考え方
 
 このプロトタイプでは、Slownessを単なる遅さではなく、自己のリズムと周囲とのズレが少ない状態として扱います。

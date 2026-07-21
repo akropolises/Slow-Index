@@ -14,5 +14,6 @@ Thumbs.db
 
 # Dependency/cache directories if the project later adds tooling.
 node_modules/
+out/
 dist/
 coverage/

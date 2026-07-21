@@ -74,6 +74,14 @@ Client SecretはGitにコミットしません。
 npm run check
 ```
 
+Windows向けのzip配布物を作る場合は、Electron Forgeを使います。
+
+```powershell
+npm run make
+```
+
+成果物は `out/make/zip/win32/x64/` に出力されます。`config.local.js` は配布物に含めません。Google OAuth Client Secretなしで動作確認する場合は、ローカルの `config.local.js` にSecretを書かずにビルドしてください。
+
 複数人で開発する場合は、最初に `CONTRIBUTING.md` を確認してください。
 
 ## Micro Slowの考え方

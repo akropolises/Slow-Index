@@ -664,8 +664,9 @@ async function loadGoogleEvents() {
       syncReminderBackends();
       renderHome();
     } catch (error) {
-      googleStatus.textContent = "Google Calendarを読み込めませんでした。Google OAuth設定を確認してください。";
-      onboardingStatus.textContent = "Google Calendarを読み込めませんでした。Google OAuth設定を確認してください。";
+      const detail = error?.message ? ` ${error.message}` : "";
+      googleStatus.textContent = `Google Calendarを読み込めませんでした。${detail}`;
+      onboardingStatus.textContent = `Google Calendarを読み込めませんでした。${detail}`;
       onboardingStatus.classList.remove("hidden");
       console.error(error);
     }

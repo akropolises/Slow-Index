@@ -104,6 +104,23 @@ function writeStoredTokens(tokens) {
   fs.writeFileSync(getTokenPath(), JSON.stringify(tokens, null, 2));
 }
 
+function clearStoredTokens() {
+  try {
+    fs.unlinkSync(getTokenPath());
+  } catch {
+    // No stored token yet.
+  }
+}
+
+async function readErrorBody(response) {
+  try {
+    const text = await response.text();
+    return text ? ` ${text}` : "";
+  } catch {
+    return "";
+  }
+}
+
 function base64Url(buffer) {
   return buffer
     .toString("base64")
@@ -192,7 +209,7 @@ async function exchangeCodeForTokens({ clientId, code, codeVerifier, redirectUri
   });
 
   if (!response.ok) {
-    throw new Error(`Token exchange failed: ${response.status}`);
+    throw new Error(`Token exchange failed: ${response.status}.${await readErrorBody(response)}`);
   }
   return response.json();
 }
@@ -209,7 +226,8 @@ async function refreshAccessToken(clientId, refreshToken) {
   });
 
   if (!response.ok) {
-    throw new Error(`Token refresh failed: ${response.status}`);
+    clearStoredTokens();
+    throw new Error(`Token refresh failed: ${response.status}.${await readErrorBody(response)}`);
   }
   return response.json();
 }
@@ -294,7 +312,7 @@ async function listTodayGoogleEvents({ clientId, calendarId = "primary" }) {
   });
 
   if (!response.ok) {
-    throw new Error(`Calendar API failed: ${response.status}`);
+    throw new Error(`Calendar API failed: ${response.status}.${await readErrorBody(response)}`);
   }
 
   const data = await response.json();
@@ -333,6 +351,11 @@ ipcMain.handle("load-google-events", (_event, config) => {
     clientId: config?.googleClientId,
     calendarId: config?.googleCalendarId || "primary",
   });
+});
+
+ipcMain.handle("clear-google-auth", () => {
+  clearStoredTokens();
+  return { ok: true };
 });
 
 app.whenReady().then(() => {

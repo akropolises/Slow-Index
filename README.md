@@ -79,6 +79,8 @@ window.SLOW_INDEX_CONFIG.googleCalendarId = "primary";
 
 Web版では「ウェブアプリケーション」用Client IDを使い、Electron版では「デスクトップアプリ」用Client IDを使います。
 
+Electron版でログイン後に読み込み失敗する場合は、`config.js` のClient IDがGoogle Cloudで「デスクトップアプリ」として作られているか確認してください。「ウェブアプリケーション」用Client IDをElectron版に使うと、認可後のtoken交換で失敗します。
+
 Google Cloud側では、JavaScript originに実際に開くURLを登録します。
 
 ```text

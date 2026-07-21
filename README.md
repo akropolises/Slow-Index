@@ -82,6 +82,14 @@ npm run make
 
 成果物は `out/make/zip/win32/x64/` に出力されます。`config.local.js` は配布物に含めません。Google OAuth Client Secretなしで動作確認する場合は、ローカルの `config.local.js` にSecretを書かずにビルドしてください。ただし、利用中のOAuth ClientがSecret必須の場合はGoogle Calendar読み込み時に `client_secret is missing` で失敗します。
 
+Google OAuth Client Secretを配布物に含めて検証する場合は、`config.local.js` にSecretを書いたうえで次を実行します。
+
+```powershell
+npm run make:local
+```
+
+この場合も `config.local.js` はGitには入りません。packaging中にだけ成果物へコピーされます。
+
 複数人で開発する場合は、最初に `CONTRIBUTING.md` を確認してください。
 
 ## Micro Slowの考え方

@@ -647,6 +647,31 @@ function addManualEvent(event) {
 }
 
 async function loadGoogleEvents() {
+  if (window.SlowIndexElectron?.isElectron) {
+    googleStatus.textContent = "Google Calendarを読み込んでいます。";
+    onboardingStatus.classList.add("hidden");
+    try {
+      const events = await window.SlowIndexElectron.loadGoogleEvents({
+        googleClientId: window.SLOW_INDEX_CONFIG?.googleClientId,
+        googleCalendarId: window.SLOW_INDEX_CONFIG?.googleCalendarId || "primary",
+      });
+      state.events = events;
+      writeStoredEvents();
+      state.dismissed.clear();
+      state.startedAutomatically.clear();
+      googleStatus.textContent = `${events.length}件の予定を読み込みました。`;
+      completeOnboarding("google");
+      syncReminderBackends();
+      renderHome();
+    } catch (error) {
+      googleStatus.textContent = "Google Calendarを読み込めませんでした。Google OAuth設定を確認してください。";
+      onboardingStatus.textContent = "Google Calendarを読み込めませんでした。Google OAuth設定を確認してください。";
+      onboardingStatus.classList.remove("hidden");
+      console.error(error);
+    }
+    return;
+  }
+
   if (!window.SlowIndexGoogleCalendar?.isConfigured()) {
     googleStatus.textContent = "config.js に Google OAuth Client ID を設定してください。";
     onboardingStatus.classList.remove("hidden");

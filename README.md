@@ -57,6 +57,8 @@ npm run electron
 
 Electron版では、renderer側の予定情報をmain processへ渡し、main processが予定5分前のタイマーを管理します。時刻になるとウィンドウを表示し、一時的に最前面へ出して対象のMicro Slowを開始します。
 
+Google Calendar連携はElectron main processでOAuthを行います。外部ブラウザでGoogleログインを開き、localhostの一時callbackで認可コードを受け取ります。Google CloudではWeb用ではなく、デスクトップアプリ用のOAuth Client IDを使ってください。
+
 現時点では実験用の最小実装です。
 
 - トレイ常駐に対応
@@ -75,6 +77,8 @@ window.SLOW_INDEX_CONFIG.googleClientId = "YOUR_GOOGLE_OAUTH_CLIENT_ID";
 window.SLOW_INDEX_CONFIG.googleCalendarId = "primary";
 ```
 
+Web版では「ウェブアプリケーション」用Client IDを使い、Electron版では「デスクトップアプリ」用Client IDを使います。
+
 Google Cloud側では、JavaScript originに実際に開くURLを登録します。
 
 ```text
@@ -84,6 +88,8 @@ http://127.0.0.1:8000
 
 現在の実装は読み取り専用です。予定の作成・編集は行わず、`calendar.readonly` スコープで当日の予定だけを読み込みます。
 
+Electron版のGoogle OAuth tokenは、ElectronのuserDataディレクトリに保存されます。Git管理されるプロジェクトフォルダには保存しません。
+
 ## 現在の実装
 
 - ダミー予定、手入力予定、Google Calendar予定の表示
@@ -92,6 +98,7 @@ http://127.0.0.1:8000
 - ページを閉じた状態でのWeb Push通知
 - 通知クリックからSlow Indexを開いてMicro Slow開始
 - Electron版での常駐と最前面Micro Slow開始
+- Electron main processでのGoogle Calendar OAuth
 - 通知クリック時の二重開始防止
 - 18種類のMicro Slow体験
 - 直近に出たMicro Slowを避ける提案ロジック

@@ -8,6 +8,9 @@ contextBridge.exposeInMainWorld("SlowIndexElectron", {
   showWindow() {
     return ipcRenderer.invoke("show-window");
   },
+  loadGoogleEvents(config) {
+    return ipcRenderer.invoke("load-google-events", config);
+  },
   onStartSlow(callback) {
     ipcRenderer.on("electron-start-slow", (_event, proposalId) => {
       callback(proposalId);

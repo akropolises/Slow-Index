@@ -93,6 +93,7 @@ Slow Indexは、Fastな生活リズムを持つ人に対して、生活や予定
 - Web Push通知が届いた場合でも、既にMicro Slowが始まっているときは二重開始しない。
 - ブラウザ終了中の通知は、OSとブラウザのバックグラウンド実行設定に依存する。
 - Electron版では通知ではなく、常駐プロセスが予定時刻にウィンドウを前面表示してMicro Slowを開始する。
+- Electron版ではGoogle OAuthをmain processで実行し、外部ブラウザとlocalhost callbackで認可を完了する。
 
 ### 7. 終了後の移行
 - Micro Slow終了後、次の予定に戻るための短い移行画面を表示する。
@@ -154,6 +155,7 @@ Slow Indexは、Fastな生活リズムを持つ人に対して、生活や予定
 - Google Calendar連携はWebアプリで行う。
 - 通知はService WorkerとWeb Pushで扱う。
 - 通知なしの前面表示体験はElectron版で検証する。
+- Electron版のGoogle Calendar連携はmain processでOAuthとCalendar API読み込みを行う。
 - Micro Slowの体験表現はHTML/CSS中心で実装する。
 - カレンダー予定の作成・編集は行わない。
 - 感覚入力は任意の色選択として残す。

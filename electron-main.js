@@ -1,9 +1,16 @@
 const path = require("path");
-const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage } = require("electron");
+const fs = require("fs");
+const http = require("http");
+const crypto = require("crypto");
+const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, shell } = require("electron");
 
 let mainWindow = null;
 let tray = null;
 const reminderTimers = new Map();
+const googleCalendarScope = "https://www.googleapis.com/auth/calendar.readonly";
+const googleAuthUrl = "https://accounts.google.com/o/oauth2/v2/auth";
+const googleTokenUrl = "https://oauth2.googleapis.com/token";
+const googleCalendarEventsUrl = "https://www.googleapis.com/calendar/v3/calendars";
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -80,6 +87,220 @@ function clearReminderTimers() {
   reminderTimers.clear();
 }
 
+function getTokenPath() {
+  return path.join(app.getPath("userData"), "google-tokens.json");
+}
+
+function readStoredTokens() {
+  try {
+    return JSON.parse(fs.readFileSync(getTokenPath(), "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredTokens(tokens) {
+  fs.mkdirSync(path.dirname(getTokenPath()), { recursive: true });
+  fs.writeFileSync(getTokenPath(), JSON.stringify(tokens, null, 2));
+}
+
+function base64Url(buffer) {
+  return buffer
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+function createPkcePair() {
+  const verifier = base64Url(crypto.randomBytes(32));
+  const challenge = base64Url(crypto.createHash("sha256").update(verifier).digest());
+  return { verifier, challenge };
+}
+
+function toTimeValue(date) {
+  return `${date.getHours().toString().padStart(2, "0")}:${date
+    .getMinutes()
+    .toString()
+    .padStart(2, "0")}`;
+}
+
+function normalizeGoogleEvents(items) {
+  return (items || [])
+    .filter((event) => event.start?.dateTime && event.end?.dateTime)
+    .map((event) => {
+      const startDate = new Date(event.start.dateTime);
+      const endDate = new Date(event.end.dateTime);
+      return {
+        id: event.id,
+        title: event.summary || "予定",
+        start: toTimeValue(startDate),
+        duration: Math.max(Math.round((endDate - startDate) / 60000), 1),
+        source: "google",
+      };
+    });
+}
+
+function startLoopbackServer() {
+  return new Promise((resolve, reject) => {
+    let settleCode;
+    let rejectCode;
+    const waitForCode = new Promise((codeResolve, codeReject) => {
+      settleCode = codeResolve;
+      rejectCode = codeReject;
+    });
+
+    const server = http.createServer((request, response) => {
+      const url = new URL(request.url, "http://127.0.0.1");
+      const code = url.searchParams.get("code");
+      const error = url.searchParams.get("error");
+
+      response.writeHead(error ? 400 : 200, { "Content-Type": "text/html; charset=utf-8" });
+      response.end(error ? "Google login failed. You can close this window." : "Google login complete. You can close this window.");
+      server.close();
+
+      if (error) {
+        rejectCode(new Error(error));
+        return;
+      }
+      settleCode(code);
+    });
+
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      resolve({
+        redirectUri: `http://127.0.0.1:${address.port}/oauth2callback`,
+        waitForCode,
+      });
+    });
+    server.once("error", rejectCode);
+    server.once("error", reject);
+  });
+}
+
+async function exchangeCodeForTokens({ clientId, code, codeVerifier, redirectUri }) {
+  const response = await fetch(googleTokenUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: clientId,
+      code,
+      code_verifier: codeVerifier,
+      redirect_uri: redirectUri,
+      grant_type: "authorization_code",
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Token exchange failed: ${response.status}`);
+  }
+  return response.json();
+}
+
+async function refreshAccessToken(clientId, refreshToken) {
+  const response = await fetch(googleTokenUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: clientId,
+      refresh_token: refreshToken,
+      grant_type: "refresh_token",
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Token refresh failed: ${response.status}`);
+  }
+  return response.json();
+}
+
+async function getGoogleAccessToken(clientId) {
+  const stored = readStoredTokens();
+  if (stored?.refresh_token && stored.expires_at && stored.expires_at > Date.now() + 60000) {
+    return stored.access_token;
+  }
+
+  if (stored?.refresh_token) {
+    const refreshed = await refreshAccessToken(clientId, stored.refresh_token);
+    const next = {
+      ...stored,
+      ...refreshed,
+      refresh_token: stored.refresh_token,
+      expires_at: Date.now() + refreshed.expires_in * 1000,
+    };
+    writeStoredTokens(next);
+    return next.access_token;
+  }
+
+  return authorizeGoogle(clientId);
+}
+
+async function authorizeGoogle(clientId) {
+  const { verifier, challenge } = createPkcePair();
+  const { redirectUri, waitForCode } = await startLoopbackServer();
+  const authUrl = new URL(googleAuthUrl);
+  authUrl.search = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    response_type: "code",
+    scope: googleCalendarScope,
+    access_type: "offline",
+    prompt: "consent",
+    code_challenge: challenge,
+    code_challenge_method: "S256",
+  }).toString();
+
+  await shell.openExternal(authUrl.toString());
+  const code = await waitForCode;
+  const tokens = await exchangeCodeForTokens({
+    clientId,
+    code,
+    codeVerifier: verifier,
+    redirectUri,
+  });
+  const stored = {
+    ...tokens,
+    expires_at: Date.now() + tokens.expires_in * 1000,
+  };
+  writeStoredTokens(stored);
+  return stored.access_token;
+}
+
+async function listTodayGoogleEvents({ clientId, calendarId = "primary" }) {
+  if (!clientId) {
+    throw new Error("Missing Google OAuth Client ID.");
+  }
+
+  const accessToken = await getGoogleAccessToken(clientId);
+  const now = new Date();
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(now);
+  end.setHours(23, 59, 59, 999);
+
+  const url = new URL(`${googleCalendarEventsUrl}/${encodeURIComponent(calendarId)}/events`);
+  url.search = new URLSearchParams({
+    timeMin: start.toISOString(),
+    timeMax: end.toISOString(),
+    showDeleted: "false",
+    singleEvents: "true",
+    orderBy: "startTime",
+  }).toString();
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Calendar API failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return normalizeGoogleEvents(data.items);
+}
+
 function scheduleReminders(reminders) {
   clearReminderTimers();
   reminders.forEach((reminder) => {
@@ -105,6 +326,13 @@ ipcMain.handle("set-reminders", (_event, reminders) => {
 
 ipcMain.handle("show-window", () => {
   showMainWindow();
+});
+
+ipcMain.handle("load-google-events", (_event, config) => {
+  return listTodayGoogleEvents({
+    clientId: config?.googleClientId,
+    calendarId: config?.googleCalendarId || "primary",
+  });
 });
 
 app.whenReady().then(() => {

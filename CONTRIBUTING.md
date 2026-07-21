@@ -60,6 +60,8 @@ Use `config.local.js` for:
 - Google Calendar ID, if not `primary`
 - VAPID Public Key
 
+Use a Web application OAuth Client ID for the browser version. Use a Desktop app OAuth Client ID for the Electron version.
+
 ## Branches
 
 - `main`: shared stable baseline
@@ -100,6 +102,7 @@ Then manually verify the path you touched:
 - Google Calendar scope stays read-only unless the team explicitly agrees otherwise.
 - Push behavior is clear for both app-open and app-closed cases.
 - Electron behavior does not depend on Web Push or VAPID keys.
+- Electron Google Calendar auth runs in the main process and stores tokens in Electron `userData`, not in the repo.
 - User-facing changes are checked on desktop and narrow mobile width.
 
 ## Commit Style

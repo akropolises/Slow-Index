@@ -27,7 +27,7 @@ window.SLOW_INDEX_CONFIG = {
 };
 ```
 
-Google Cloudのデスクトップアプリ用OAuth ClientにClient Secretが表示されている場合は、`config.local.js` にだけ追加します。
+Google Cloudのデスクトップアプリ用OAuth Clientでtoken交換時に `client_secret is missing` が出る場合は、`config.local.js` にだけClient Secretを追加します。
 
 ```js
 window.SLOW_INDEX_CONFIG.googleClientSecret = "YOUR_DESKTOP_OAUTH_CLIENT_SECRET";
@@ -80,7 +80,7 @@ Windows向けのzip配布物を作る場合は、Electron Forgeを使います�
 npm run make
 ```
 
-成果物は `out/make/zip/win32/x64/` に出力されます。`config.local.js` は配布物に含めません。Google OAuth Client Secretなしで動作確認する場合は、ローカルの `config.local.js` にSecretを書かずにビルドしてください。
+成果物は `out/make/zip/win32/x64/` に出力されます。`config.local.js` は配布物に含めません。Google OAuth Client Secretなしで動作確認する場合は、ローカルの `config.local.js` にSecretを書かずにビルドしてください。ただし、利用中のOAuth ClientがSecret必須の場合はGoogle Calendar読み込み時に `client_secret is missing` で失敗します。
 
 複数人で開発する場合は、最初に `CONTRIBUTING.md` を確認してください。
 

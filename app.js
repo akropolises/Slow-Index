@@ -435,6 +435,14 @@ function addManualEvent(event) {
   renderHome();
 }
 
+function getGoogleLoadErrorMessage(error) {
+  const message = error?.message || "";
+  if (message.includes("client_secret is missing")) {
+    return "このGoogle OAuth ClientではClient Secretが必要です。config.local.jsにgoogleClientSecretを設定してから起動してください。";
+  }
+  return message;
+}
+
 async function loadGoogleEvents() {
   googleStatus.textContent = "Google Calendarを読み込んでいます。";
   onboardingStatus.classList.add("hidden");
@@ -455,7 +463,8 @@ async function loadGoogleEvents() {
     }
     renderHome();
   } catch (error) {
-    const detail = error?.message ? ` ${error.message}` : "";
+    const message = getGoogleLoadErrorMessage(error);
+    const detail = message ? ` ${message}` : "";
     googleStatus.textContent = `Google Calendarを読み込めませんでした。${detail}`;
     onboardingStatus.textContent = `Google Calendarを読み込めませんでした。${detail}`;
     onboardingStatus.classList.remove("hidden");

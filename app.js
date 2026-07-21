@@ -24,6 +24,7 @@ const state = {
 };
 
 const maxSlowDuration = 60;
+const autoStartWindowMinutes = 1;
 
 const views = {
   onboarding: document.querySelector("#onboardingView"),
@@ -322,7 +323,7 @@ function getDueStartProposal(minutes = nowMinutes()) {
         !state.dismissed.has(proposal.id) &&
         !state.startedAutomatically.has(proposal.id) &&
         proposal.slowStartMinutes <= minutes &&
-        minutes < proposal.eventStartMinutes
+        minutes < proposal.slowStartMinutes + autoStartWindowMinutes
       );
     })
     .sort((a, b) => a.eventStartMinutes - b.eventStartMinutes)[0] || null;

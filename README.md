@@ -46,6 +46,26 @@ window.SLOW_INDEX_CONFIG.pushPublicKey = "YOUR_VAPID_PUBLIC_KEY";
 
 Private KeyはGitや `config.local.js` に入れず、環境変数だけで扱ってください。
 
+## Electronデスクトップ版
+
+通知ではなく、時刻になったらSlow Indexウィンドウを前面に出す実験版です。
+
+```powershell
+npm install
+npm run electron
+```
+
+Electron版では、renderer側の予定情報をmain processへ渡し、main processが予定5分前のタイマーを管理します。時刻になるとウィンドウを表示し、一時的に最前面へ出して対象のMicro Slowを開始します。
+
+現時点では実験用の最小実装です。
+
+- トレイ常駐に対応
+- ウィンドウを閉じても終了せず、非表示になる
+- 予定5分前にウィンドウを表示してMicro Slow開始
+- OS起動時の自動起動はまだ無効
+- インストーラー化、コード署名、配布用ビルドは未対応
+- Electron版ではWeb Push通知は使わない
+
 ## Google Calendar連携
 
 Google Calendarを読むには、Google CloudでOAuth Client IDを作成し、`config.local.js` に設定します。
@@ -71,6 +91,7 @@ http://127.0.0.1:8000
 - ページを開いている状態でのMicro Slow自動開始
 - ページを閉じた状態でのWeb Push通知
 - 通知クリックからSlow Indexを開いてMicro Slow開始
+- Electron版での常駐と最前面Micro Slow開始
 - 通知クリック時の二重開始防止
 - 18種類のMicro Slow体験
 - 直近に出たMicro Slowを避ける提案ロジック
@@ -123,6 +144,8 @@ window.SLOW_INDEX_CONFIG.pushPublicKey = "YOUR_VAPID_PUBLIC_KEY";
 - `google-calendar.js`: Google Calendar読み込み
 - `sw.js`: Push受信と通知クリック時の復帰処理
 - `push-server.js`: ローカルWeb Pushサーバー
+- `electron-main.js`: Electron main process
+- `electron-preload.js`: Electron preload bridge
 - `manifest.webmanifest`: PWAメタデータ
 - `config.js`: 共有用の既定設定
 - `config.example.js`: 個人設定ファイルのひな形
@@ -149,6 +172,8 @@ Micro Slowは、予定の前に短い感覚体験を置くことで、焦りや�
 ## まだやっていないこと
 
 - Pushサーバーのクラウド常時稼働
+- Electron版の配布用ビルド、署名、インストーラー
+- OS起動時の自動起動設定UI
 - 予定種別ごとのMicro Slow最適化
 - ユーザータイプ分類
 - スコア、ランキング、連続記録

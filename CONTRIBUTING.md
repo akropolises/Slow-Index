@@ -35,6 +35,15 @@ Put only the public key in `config.local.js`.
 window.SLOW_INDEX_CONFIG.pushPublicKey = "YOUR_VAPID_PUBLIC_KEY";
 ```
 
+For Electron development:
+
+```powershell
+npm install
+npm run electron
+```
+
+Electron changes usually involve `electron-main.js`, `electron-preload.js`, and the renderer contract in `app.js`.
+
 ## Local Config
 
 Do not commit personal OAuth values or VAPID private keys.
@@ -77,6 +86,7 @@ Then manually verify the path you touched:
 - Automatic start at the scheduled Micro Slow time
 - Notification permission and test notification, when changing notification code
 - Web Push reminder from `npm run start:push`, when changing Push code
+- Electron window foreground behavior from `npm run electron`, when changing desktop code
 - Google Calendar load, when changing calendar code
 - Mobile-width layout, when changing HTML or CSS
 
@@ -89,6 +99,7 @@ Then manually verify the path you touched:
 - `micro-slows.md` is updated when Micro Slow content changes.
 - Google Calendar scope stays read-only unless the team explicitly agrees otherwise.
 - Push behavior is clear for both app-open and app-closed cases.
+- Electron behavior does not depend on Web Push or VAPID keys.
 - User-facing changes are checked on desktop and narrow mobile width.
 
 ## Commit Style

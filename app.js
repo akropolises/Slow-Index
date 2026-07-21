@@ -268,6 +268,13 @@ function isNotificationSupported() {
 }
 
 function updateNotificationStatus() {
+  if (window.SlowIndexElectron?.isElectron) {
+    notificationButton.disabled = true;
+    testNotificationButton.disabled = true;
+    notificationStatus.textContent = "Electron版では通知ではなく、時刻になるとウィンドウを前面に表示します。";
+    return;
+  }
+
   const serviceWorkerReady = "serviceWorker" in navigator;
   const secureReady = window.isSecureContext;
 
@@ -314,7 +321,7 @@ async function requestNotificationPermission() {
   const permission = await Notification.requestPermission();
   if (permission === "granted") {
     await subscribeToWebPush();
-    syncPushReminders();
+    syncReminderBackends();
   }
   updateNotificationStatus();
 }
@@ -433,7 +440,21 @@ function buildPushReminders() {
     .filter((reminder) => new Date(reminder.dueAt).getTime() > now);
 }
 
+function syncDesktopReminders() {
+  if (!window.SlowIndexElectron?.isElectron) {
+    return;
+  }
+
+  window.SlowIndexElectron.setReminders(buildPushReminders()).catch((error) => {
+    console.error("Desktop reminder sync failed.", error);
+  });
+}
+
 async function syncPushReminders() {
+  if (window.SlowIndexElectron?.isElectron) {
+    return;
+  }
+
   if (!isNotificationSupported() || Notification.permission !== "granted" || !window.SLOW_INDEX_CONFIG?.pushPublicKey) {
     return;
   }
@@ -448,6 +469,11 @@ async function syncPushReminders() {
   } catch (error) {
     console.error("Push reminder sync failed.", error);
   }
+}
+
+function syncReminderBackends() {
+  syncDesktopReminders();
+  syncPushReminders();
 }
 
 function handleServiceWorkerMessage(event) {
@@ -532,6 +558,12 @@ function handleStartupRequest() {
 }
 
 function bootNotifications() {
+  if (window.SlowIndexElectron?.isElectron) {
+    handleStartupRequest();
+    renderHome();
+    return;
+  }
+
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.addEventListener("message", handleServiceWorkerMessage);
   }
@@ -610,7 +642,7 @@ function addManualEvent(event) {
   });
   state.events.sort((a, b) => minutesFromTime(a.start) - minutesFromTime(b.start));
   writeStoredEvents();
-  syncPushReminders();
+  syncReminderBackends();
   renderHome();
 }
 
@@ -631,7 +663,7 @@ async function loadGoogleEvents() {
     state.startedAutomatically.clear();
     googleStatus.textContent = `${events.length}件の予定を読み込みました。`;
     completeOnboarding("google");
-    syncPushReminders();
+    syncReminderBackends();
     renderHome();
   } catch (error) {
     googleStatus.textContent = "Google Calendarを読み込めませんでした。設定と許可を確認してください。";
@@ -669,7 +701,7 @@ document.querySelectorAll(".toggle-button").forEach((button) => {
       writeStoredEvents();
       state.dismissed.clear();
       state.startedAutomatically.clear();
-      syncPushReminders();
+      syncReminderBackends();
       renderHome();
     }
   });
@@ -696,4 +728,7 @@ if (state.onboarded) {
 updateNotificationStatus();
 bootNotifications();
 startNotificationScheduler();
-syncPushReminders();
+if (window.SlowIndexElectron?.isElectron) {
+  window.SlowIndexElectron.onStartSlow(startSlowFromNotification);
+}
+syncReminderBackends();

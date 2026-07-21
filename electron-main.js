@@ -162,13 +162,56 @@ function startLoopbackServer() {
       rejectCode = codeReject;
     });
 
+    const closePage = (title, message) => `<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <title>${title}</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        color: #24332f;
+        background: #fffdf8;
+        font-family: system-ui, sans-serif;
+      }
+      main {
+        width: min(28rem, calc(100vw - 2rem));
+        text-align: center;
+      }
+      p {
+        line-height: 1.7;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>${title}</h1>
+      <p>${message}</p>
+      <p id="fallback">このタブは自動で閉じます。閉じない場合は手動で閉じてください。</p>
+    </main>
+    <script>
+      window.setTimeout(() => {
+        window.close();
+        document.getElementById("fallback").textContent = "認可処理は完了しました。このタブを閉じてSlow Indexに戻ってください。";
+      }, 250);
+    </script>
+  </body>
+</html>`;
+
     const server = http.createServer((request, response) => {
       const url = new URL(request.url, "http://127.0.0.1");
       const code = url.searchParams.get("code");
       const error = url.searchParams.get("error");
 
       response.writeHead(error ? 400 : 200, { "Content-Type": "text/html; charset=utf-8" });
-      response.end(error ? "Google login failed. You can close this window." : "Google login complete. You can close this window.");
+      response.end(
+        error
+          ? closePage("Google login failed", "Slow IndexでGoogle Calendarを読み込めませんでした。")
+          : closePage("Google login complete", "Slow Indexに戻ってGoogle Calendarを読み込んでいます。")
+      );
       server.close();
 
       if (error) {

@@ -234,10 +234,6 @@ select {
   align-items: center;
 }
 
-.calendar-event.dismissed {
-  opacity: 0.48;
-}
-
 .event-time {
   display: grid;
   gap: 3px;
@@ -297,12 +293,27 @@ select {
   place-items: center;
   min-height: 28px;
   white-space: nowrap;
+  border: 1px solid transparent;
   border-radius: 999px;
   padding: 0 10px;
   background: var(--mist);
   color: var(--accent-strong);
   font-size: 0.78rem;
   font-weight: 700;
+}
+
+.event-badge:not(:disabled) {
+  cursor: pointer;
+}
+
+.calendar-event.dismissed .event-badge {
+  border-color: var(--line);
+  background: #fffaf0;
+  color: var(--muted);
+}
+
+.event-badge.disabled {
+  color: var(--muted);
 }
 
 .dismiss-event {

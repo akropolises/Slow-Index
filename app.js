@@ -165,10 +165,12 @@ function activateSource(source) {
 }
 
 function replaceEventsFromGoogle(events) {
-  state.events = events;
+  const localEvents = state.events.filter((event) => event.source === "manual");
+  state.events = [...events, ...localEvents].sort((a, b) => minutesFromTime(a.start) - minutesFromTime(b.start));
   writeStoredEvents();
-  state.dismissed.clear();
-  state.startedAutomatically.clear();
+  const eventIds = new Set(state.events.map((event) => event.id));
+  state.dismissed = new Set([...state.dismissed].filter((id) => eventIds.has(id)));
+  state.startedAutomatically = new Set([...state.startedAutomatically].filter((id) => eventIds.has(id)));
   activateSource("google");
   syncReminderBackends();
 }
@@ -215,6 +217,7 @@ function renderHome() {
   proposals.forEach((proposal) => {
     const eventEnd = timeFromMinutes(minutesFromTime(proposal.event.start) + Number(proposal.event.duration));
     const isDismissed = state.dismissed.has(proposal.id);
+    const autoLabel = proposal.hasSpace ? (isDismissed ? "スキップ" : "自動開始") : "余白少";
     const item = document.createElement("article");
     item.className = `calendar-event${isDismissed ? " dismissed" : ""}`;
     item.innerHTML = `
@@ -222,13 +225,15 @@ function renderHome() {
         <span>${proposal.event.start}</span>
         <span>${eventEnd}</span>
       </div>
-      <button class="event-card" data-action="start" data-id="${proposal.id}" type="button" ${isDismissed ? "disabled" : ""}>
+      <button class="event-card" data-action="start" data-id="${proposal.id}" type="button">
         <span class="event-title">${proposal.event.title}</span>
         <span class="event-subtext">${proposal.slowStart} から ${Math.min(proposal.slow.seconds, maxSlowDuration)}秒</span>
       </button>
       <div class="event-side">
-        <span class="event-badge">${proposal.hasSpace ? "自動開始" : "余白少"}</span>
-        <button class="dismiss-event" data-action="dismiss" data-id="${proposal.id}" type="button" aria-label="${proposal.event.title}のMicro Slowを今回はしない">×</button>
+        <button class="event-badge${proposal.hasSpace ? "" : " disabled"}" data-action="toggle-auto" data-id="${proposal.id}" type="button" ${
+      proposal.hasSpace ? "" : "disabled"
+    }>${autoLabel}</button>
+        <button class="dismiss-event" data-action="delete" data-id="${proposal.event.id}" type="button" aria-label="${proposal.event.title}を削除">×</button>
       </div>
     `;
     calendarDay.append(item);
@@ -406,11 +411,26 @@ function handleProposalAction(event) {
 
   const id = button.dataset.id;
   if (button.dataset.action === "start") {
-    if (state.dismissed.has(id)) return;
     startSlow(id);
   }
-  if (button.dataset.action === "dismiss") {
-    state.dismissed.add(id);
+  if (button.dataset.action === "toggle-auto") {
+    const proposal = state.events.map(buildProposalForEvent).find((item) => item.id === id);
+    if (!proposal?.hasSpace) return;
+    if (state.dismissed.has(id)) {
+      state.dismissed.delete(id);
+      state.startedAutomatically.delete(id);
+    } else {
+      state.dismissed.add(id);
+    }
+    syncReminderBackends();
+    renderHome();
+  }
+  if (button.dataset.action === "delete") {
+    state.events = state.events.filter((item) => item.id !== id);
+    state.dismissed.delete(id);
+    state.startedAutomatically.delete(id);
+    writeStoredEvents();
+    syncReminderBackends();
     renderHome();
   }
 }

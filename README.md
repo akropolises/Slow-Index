@@ -39,7 +39,7 @@ Client SecretはGitにコミットしません。
 
 ## 現在の実装
 
-- ダミー予定、手入力予定、Google Calendar予定の表示
+- 手入力予定、Google Calendar予定の表示
 - Google Calendar表示中の更新ボタンによる再同期
 - Google Calendar 1時間ごとの自動同期
 - 予定5分前のMicro Slow提案

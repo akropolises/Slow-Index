@@ -1,15 +1,15 @@
 const microSlows = window.MICRO_SLOWS;
 
-const sampleEvents = [
-  { id: "e1", title: "進捗確認", start: "10:30", duration: 30, source: "sample" },
-  { id: "e2", title: "企画会議", start: "13:00", duration: 60, source: "sample" },
-  { id: "e3", title: "レビュー", start: "15:30", duration: 30, source: "sample" },
-  { id: "e4", title: "共有会", start: "17:00", duration: 45, source: "sample" },
-];
+const storedSource = localStorage.getItem("slow-index-source");
+const storedEvents = readStoredEvents() || [];
+const runtimeEvents = storedEvents.filter((event) => event.source !== "sample");
+if (runtimeEvents.length !== storedEvents.length) {
+  localStorage.setItem("slow-index-events", JSON.stringify(runtimeEvents));
+}
 
 const state = {
-  source: localStorage.getItem("slow-index-source") || "sample",
-  events: readStoredEvents() || [...sampleEvents],
+  source: storedSource === "manual" ? "manual" : "google",
+  events: runtimeEvents,
   dismissed: new Set(),
   recentSlowIds: readRecentSlowIds(),
   onboarded: localStorage.getItem("slow-index-onboarded") === "true",
@@ -175,7 +175,7 @@ function replaceEventsFromGoogle(events) {
   syncReminderBackends();
 }
 
-function completeOnboarding(source = "sample") {
+function completeOnboarding(source = "google") {
   state.onboarded = true;
   localStorage.setItem("slow-index-onboarded", "true");
   activateSource(source);
@@ -500,18 +500,9 @@ document.querySelector("#completeButton").addEventListener("click", () => {
 document.querySelector("#reloadButton").addEventListener("click", reloadCurrentSource);
 document.querySelector("#googleConnectButton").addEventListener("click", loadGoogleEvents);
 document.querySelector("#onboardingGoogleButton").addEventListener("click", loadGoogleEvents);
-document.querySelector("#onboardingDemoButton").addEventListener("click", () => completeOnboarding("sample"));
 document.querySelectorAll(".toggle-button").forEach((button) => {
   button.addEventListener("click", () => {
     activateSource(button.dataset.source);
-    if (state.source === "sample") {
-      state.events = [...sampleEvents];
-      writeStoredEvents();
-      state.dismissed.clear();
-      state.startedAutomatically.clear();
-      syncReminderBackends();
-      renderHome();
-    }
   });
 });
 

@@ -22,7 +22,6 @@
           <p>予定を読み取り、現在予定がなく、もうすぐ次の予定が始まるときだけMicro Slowを提案します。</p>
           <div class="onboarding-actions">
             <button class="primary-button" id="onboardingGoogleButton" type="button">Google Calendarと連携</button>
-            <button class="ghost-button" id="onboardingDemoButton" type="button">デモで見る</button>
           </div>
           <p class="setup-note hidden" id="onboardingStatus">config.js に Google OAuth Client ID を設定してください。</p>
         </section>
@@ -37,8 +36,7 @@
           </div>
 
           <div class="calendar-toggle" role="group" aria-label="カレンダー">
-            <button class="toggle-button active" data-source="sample" type="button">ダミー予定</button>
-            <button class="toggle-button" data-source="google" type="button">Google</button>
+            <button class="toggle-button active" data-source="google" type="button">Google</button>
             <button class="toggle-button" data-source="manual" type="button">手入力</button>
           </div>
 

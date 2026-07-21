@@ -151,7 +151,7 @@ Slow Indexは、Fastな生活リズムを持つ人に対して、生活や予定
 ## MVP要件
 MVPでは以下を満たせばよい。
 
-- Google Calendarまたはダミーカレンダーから予定を読み込める。
+- Google Calendarまたは手入力から予定を読み込める。
 - 予定5分前のMicro Slow候補を生成できる。
 - ユーザーがMicro Slowを開始・終了できる。
 - アプリ起動中は予定5分前にMicro Slowを自動開始できる。

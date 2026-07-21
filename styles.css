@@ -106,7 +106,6 @@ p {
   display: none !important;
 }
 
-.icon-button,
 .primary-button,
 .secondary-button,
 .ghost-button,
@@ -118,12 +117,6 @@ p {
   padding: 0 14px;
   background: #fffaf0;
   color: var(--text);
-}
-
-.icon-button {
-  width: 44px;
-  padding: 0;
-  font-size: 1.1rem;
 }
 
 .primary-button {
@@ -414,12 +407,6 @@ select {
   margin-top: 18px;
 }
 
-.setting-line {
-  grid-template-columns: 1fr minmax(90px, 180px);
-  align-items: center;
-  margin: 14px 0;
-}
-
 @keyframes breathe {
   0%,
   100% {
@@ -445,11 +432,6 @@ select {
 
   .topbar h1 {
     font-size: 1.45rem;
-  }
-
-  .icon-button {
-    align-self: flex-start;
-    flex: 0 0 auto;
   }
 
   main {

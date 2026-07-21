@@ -21,18 +21,15 @@ const state = {
   startedAt: 0,
   view: null,
   startedAutomatically: new Set(),
-  settings: {
-    maxSuggestions: 3,
-    maxDuration: 60,
-  },
 };
+
+const maxSlowDuration = 60;
 
 const views = {
   onboarding: document.querySelector("#onboardingView"),
   home: document.querySelector("#homeView"),
   slow: document.querySelector("#slowView"),
   transition: document.querySelector("#transitionView"),
-  settings: document.querySelector("#settingsView"),
 };
 
 const calendarDay = document.querySelector("#calendarDay");
@@ -200,7 +197,7 @@ function renderHome() {
       <div>
         <p class="eyebrow">Micro Slow 提案</p>
         <h3>${activePrompt.event.start} ${activePrompt.event.title}</h3>
-        <p>${Math.min(activePrompt.slow.seconds, state.settings.maxDuration)}秒だけ整える。</p>
+        <p>${Math.min(activePrompt.slow.seconds, maxSlowDuration)}秒だけ整える。</p>
       </div>
       <button class="primary-button" data-action="start" data-id="${activePrompt.id}" type="button">はじめる</button>
     `;
@@ -227,7 +224,7 @@ function renderHome() {
       </div>
       <button class="event-card" data-action="start" data-id="${proposal.id}" type="button" ${isDismissed ? "disabled" : ""}>
         <span class="event-title">${proposal.event.title}</span>
-        <span class="event-subtext">${proposal.slowStart} から ${Math.min(proposal.slow.seconds, state.settings.maxDuration)}秒</span>
+        <span class="event-subtext">${proposal.slowStart} から ${Math.min(proposal.slow.seconds, maxSlowDuration)}秒</span>
       </button>
       <div class="event-side">
         <span class="event-badge">${proposal.hasSpace ? "自動開始" : "余白少"}</span>
@@ -248,7 +245,7 @@ function startSlow(proposalId, options = {}) {
   state.currentProposal = proposal;
   state.currentSlow = {
     ...proposal.slow,
-    seconds: Math.min(proposal.slow.seconds, state.settings.maxDuration),
+    seconds: Math.min(proposal.slow.seconds, maxSlowDuration),
   };
   document.querySelector("#slowTitle").textContent = state.currentSlow.title;
   document.querySelector("#slowInstruction").textContent = state.currentSlow.instruction;
@@ -282,7 +279,7 @@ function buildDesktopReminders() {
       return {
         id: proposal.id,
         eventTitle: proposal.event.title,
-        seconds: Math.min(proposal.slow.seconds, state.settings.maxDuration),
+        seconds: Math.min(proposal.slow.seconds, maxSlowDuration),
         dueAt: dueAt.toISOString(),
       };
     })
@@ -484,14 +481,6 @@ document.querySelector("#reloadButton").addEventListener("click", reloadCurrentS
 document.querySelector("#googleConnectButton").addEventListener("click", loadGoogleEvents);
 document.querySelector("#onboardingGoogleButton").addEventListener("click", loadGoogleEvents);
 document.querySelector("#onboardingDemoButton").addEventListener("click", () => completeOnboarding("sample"));
-document.querySelector("#settingsButton").addEventListener("click", () => showView("settings"));
-document.querySelector("#saveSettingsButton").addEventListener("click", () => {
-  state.settings.maxSuggestions = Number(document.querySelector("#maxSuggestionsInput").value);
-  state.settings.maxDuration = Number(document.querySelector("#maxDurationInput").value);
-  showView("home");
-  renderHome();
-});
-
 document.querySelectorAll(".toggle-button").forEach((button) => {
   button.addEventListener("click", () => {
     activateSource(button.dataset.source);

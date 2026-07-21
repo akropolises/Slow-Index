@@ -13,9 +13,6 @@
           <p class="eyebrow">Slow Index</p>
           <h1>次の予定の前に、短く整える。</h1>
         </div>
-        <button class="icon-button" id="settingsButton" type="button" aria-label="設定">
-          <span aria-hidden="true">⚙</span>
-        </button>
       </header>
 
       <main>
@@ -106,28 +103,6 @@
           </div>
         </section>
 
-        <section class="panel hidden" id="settingsView" aria-labelledby="settingsTitle">
-          <div class="section-head">
-            <div>
-              <h2 id="settingsTitle">設定</h2>
-              <p>提案の強さを控えめに調整できます。</p>
-            </div>
-          </div>
-          <label class="setting-line">
-            <span>1日の最大提案回数</span>
-            <input id="maxSuggestionsInput" type="number" min="1" max="8" value="3">
-          </label>
-          <label class="setting-line">
-            <span>Micro Slowの最大時間</span>
-            <select id="maxDurationInput">
-              <option value="30">30秒</option>
-              <option value="60" selected>60秒</option>
-              <option value="120">2分</option>
-              <option value="180">3分</option>
-            </select>
-          </label>
-          <button class="primary-button" id="saveSettingsButton" type="button">保存</button>
-        </section>
       </main>
     </div>
 

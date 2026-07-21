@@ -77,6 +77,28 @@ function showMainWindow() {
   }, 3000);
 }
 
+function enterSlowMode() {
+  if (!mainWindow) return;
+
+  if (mainWindow.isMinimized()) {
+    mainWindow.restore();
+  }
+  mainWindow.show();
+  mainWindow.setFullScreen(true);
+  mainWindow.setAlwaysOnTop(true, "screen-saver");
+  mainWindow.focus();
+}
+
+function leaveSlowMode() {
+  if (!mainWindow) return;
+
+  mainWindow.setAlwaysOnTop(false);
+  if (mainWindow.isFullScreen()) {
+    mainWindow.setFullScreen(false);
+  }
+  mainWindow.minimize();
+}
+
 function clearReminderTimers() {
   reminderTimers.forEach((timer) => clearTimeout(timer));
   reminderTimers.clear();
@@ -393,6 +415,14 @@ ipcMain.handle("set-reminders", (_event, reminders) => {
 
 ipcMain.handle("show-window", () => {
   showMainWindow();
+});
+
+ipcMain.handle("enter-slow-mode", () => {
+  enterSlowMode();
+});
+
+ipcMain.handle("leave-slow-mode", () => {
+  leaveSlowMode();
 });
 
 ipcMain.handle("load-google-events", (_event, config) => {

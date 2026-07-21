@@ -254,6 +254,7 @@ function startSlow(proposalId, options = {}) {
   document.querySelector("#slowInstruction").textContent = state.currentSlow.instruction;
   document.querySelector("#slowDuration").textContent = `最大 ${state.currentSlow.seconds}秒`;
   showView("slow");
+  window.SlowIndexElectron?.enterSlowMode?.();
   rememberSlow(state.currentSlow.id);
   runProgress();
 }
@@ -477,6 +478,7 @@ document.querySelector("#finishSlowButton").addEventListener("click", finishSlow
 document.querySelector("#completeButton").addEventListener("click", () => {
   showView("home");
   renderHome();
+  window.SlowIndexElectron?.leaveSlowMode?.();
 });
 document.querySelector("#reloadButton").addEventListener("click", reloadCurrentSource);
 document.querySelector("#googleConnectButton").addEventListener("click", loadGoogleEvents);
@@ -511,6 +513,7 @@ document.querySelectorAll(".sense-button").forEach((button) => {
     window.setTimeout(() => {
       showView("home");
       renderHome();
+      window.SlowIndexElectron?.leaveSlowMode?.();
     }, 450);
   });
 });

@@ -8,6 +8,12 @@ contextBridge.exposeInMainWorld("SlowIndexElectron", {
   showWindow() {
     return ipcRenderer.invoke("show-window");
   },
+  enterSlowMode() {
+    return ipcRenderer.invoke("enter-slow-mode");
+  },
+  leaveSlowMode() {
+    return ipcRenderer.invoke("leave-slow-mode");
+  },
   loadGoogleEvents(config) {
     return ipcRenderer.invoke("load-google-events", config);
   },

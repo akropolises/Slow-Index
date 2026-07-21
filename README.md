@@ -146,7 +146,6 @@ http://localhost:8000/
 
 ```js
 window.SLOW_INDEX_CONFIG.googleClientId = "YOUR_GOOGLE_OAUTH_CLIENT_ID";
-window.SLOW_INDEX_CONFIG.googleClientSecret = "YOUR_DESKTOP_OAUTH_CLIENT_SECRET";
 window.SLOW_INDEX_CONFIG.googleCalendarId = "primary";
 window.SLOW_INDEX_CONFIG.pushPublicKey = "YOUR_VAPID_PUBLIC_KEY";
 ```

@@ -384,17 +384,29 @@ function startAutoStartScheduler() {
 }
 
 function startGoogleAutoSync() {
-  window.clearInterval(state.googleSyncTimer);
+  window.clearTimeout(state.googleSyncTimer);
   if (!desktop?.isElectron) {
     return;
   }
 
-  state.googleSyncTimer = window.setInterval(() => {
-    if (state.source !== "google" || state.view === "slow" || state.view === "transition") {
+  const syncIfAvailable = () => {
+    if (!state.onboarded || state.source !== "google" || state.view === "slow" || state.view === "transition") {
       return;
     }
     loadGoogleEvents();
-  }, 60 * 60 * 1000);
+  };
+  const scheduleNextHourlySync = () => {
+    const now = new Date();
+    const nextHour = new Date(now);
+    nextHour.setHours(now.getHours() + 1, 0, 0, 0);
+    state.googleSyncTimer = window.setTimeout(() => {
+      syncIfAvailable();
+      scheduleNextHourlySync();
+    }, nextHour.getTime() - now.getTime());
+  };
+
+  syncIfAvailable();
+  scheduleNextHourlySync();
 }
 
 function reloadCurrentSource() {

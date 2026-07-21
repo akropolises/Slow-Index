@@ -11,6 +11,7 @@ const googleCalendarScope = "https://www.googleapis.com/auth/calendar.readonly";
 const googleAuthUrl = "https://accounts.google.com/o/oauth2/v2/auth";
 const googleTokenUrl = "https://oauth2.googleapis.com/token";
 const googleCalendarEventsUrl = "https://www.googleapis.com/calendar/v3/calendars";
+const googleCalendarListUrl = "https://www.googleapis.com/calendar/v3/users/me/calendarList";
 const appIconPath = path.join(__dirname, "assets", "tray-icon.png");
 
 function createWindow() {
@@ -159,18 +160,20 @@ function toTimeValue(date) {
     .padStart(2, "0")}`;
 }
 
-function normalizeGoogleEvents(items) {
+function normalizeGoogleEvents(items, calendar = {}) {
   return (items || [])
     .filter((event) => event.start?.dateTime && event.end?.dateTime)
     .map((event) => {
       const startDate = new Date(event.start.dateTime);
       const endDate = new Date(event.end.dateTime);
       return {
-        id: event.id,
+        id: `${calendar.id || "primary"}:${event.id}`,
         title: event.summary || "予定",
         start: toTimeValue(startDate),
         duration: Math.max(Math.round((endDate - startDate) / 60000), 1),
         source: "google",
+        calendarId: calendar.id || "primary",
+        calendarSummary: calendar.summary || "",
       };
     });
 }
@@ -355,27 +358,7 @@ async function authorizeGoogle(clientId, clientSecret) {
   return stored.access_token;
 }
 
-async function listTodayGoogleEvents({ clientId, clientSecret, calendarId = "primary" }) {
-  if (!clientId) {
-    throw new Error("Missing Google OAuth Client ID.");
-  }
-
-  const accessToken = await getGoogleAccessToken(clientId, clientSecret);
-  const now = new Date();
-  const start = new Date(now);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(now);
-  end.setHours(23, 59, 59, 999);
-
-  const url = new URL(`${googleCalendarEventsUrl}/${encodeURIComponent(calendarId)}/events`);
-  url.search = new URLSearchParams({
-    timeMin: start.toISOString(),
-    timeMax: end.toISOString(),
-    showDeleted: "false",
-    singleEvents: "true",
-    orderBy: "startTime",
-  }).toString();
-
+async function fetchGoogleJson(url, accessToken, errorLabel) {
   const response = await fetch(url, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -383,11 +366,78 @@ async function listTodayGoogleEvents({ clientId, clientSecret, calendarId = "pri
   });
 
   if (!response.ok) {
-    throw new Error(`Calendar API failed: ${response.status}.${await readErrorBody(response)}`);
+    throw new Error(`${errorLabel} failed: ${response.status}.${await readErrorBody(response)}`);
   }
 
-  const data = await response.json();
-  return normalizeGoogleEvents(data.items);
+  return response.json();
+}
+
+async function listReadableGoogleCalendars(accessToken) {
+  const calendars = [];
+  let pageToken;
+
+  do {
+    const url = new URL(googleCalendarListUrl);
+    url.search = new URLSearchParams({
+      minAccessRole: "reader",
+      showDeleted: "false",
+      showHidden: "false",
+      ...(pageToken ? { pageToken } : {}),
+    }).toString();
+
+    const data = await fetchGoogleJson(url, accessToken, "CalendarList API");
+    calendars.push(...(data.items || []));
+    pageToken = data.nextPageToken;
+  } while (pageToken);
+
+  return calendars.filter((calendar) => calendar.primary || calendar.selected);
+}
+
+function normalizeCalendarIds(configuredCalendarIds, configuredCalendarId) {
+  if (Array.isArray(configuredCalendarIds) && configuredCalendarIds.length > 0) {
+    return configuredCalendarIds.filter(Boolean);
+  }
+  if (configuredCalendarId) {
+    return [configuredCalendarId];
+  }
+  return [];
+}
+
+async function listTodayGoogleEvents({ clientId, clientSecret, calendarId, calendarIds = [] }) {
+  if (!clientId) {
+    throw new Error("Missing Google OAuth Client ID.");
+  }
+
+  const accessToken = await getGoogleAccessToken(clientId, clientSecret);
+  const configuredCalendarIds = normalizeCalendarIds(calendarIds, calendarId);
+  const calendars =
+    configuredCalendarIds.length > 0
+      ? configuredCalendarIds.map((id) => ({ id, summary: id }))
+      : await listReadableGoogleCalendars(accessToken);
+
+  const now = new Date();
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(now);
+  end.setHours(23, 59, 59, 999);
+
+  const eventGroups = await Promise.all(
+    calendars.map(async (calendar) => {
+      const url = new URL(`${googleCalendarEventsUrl}/${encodeURIComponent(calendar.id)}/events`);
+      url.search = new URLSearchParams({
+        timeMin: start.toISOString(),
+        timeMax: end.toISOString(),
+        showDeleted: "false",
+        singleEvents: "true",
+        orderBy: "startTime",
+      }).toString();
+
+      const data = await fetchGoogleJson(url, accessToken, `Calendar API (${calendar.summary || calendar.id})`);
+      return normalizeGoogleEvents(data.items, calendar);
+    })
+  );
+
+  return eventGroups.flat().sort((a, b) => a.start.localeCompare(b.start));
 }
 
 function scheduleReminders(reminders) {
@@ -429,7 +479,8 @@ ipcMain.handle("load-google-events", (_event, config) => {
   return listTodayGoogleEvents({
     clientId: config?.googleClientId,
     clientSecret: config?.googleClientSecret,
-    calendarId: config?.googleCalendarId || "primary",
+    calendarId: config?.googleCalendarId,
+    calendarIds: config?.googleCalendarIds,
   });
 });
 

@@ -22,12 +22,24 @@ Google Cloudでは、デスクトップアプリ用のOAuth Client IDを使い�
 ```js
 window.MICRO_SLOW_CONFIG = {
   googleClientId: "YOUR_DESKTOP_OAUTH_CLIENT_ID",
-  googleCalendarId: "primary",
   upcomingWindowMinutes: 7,
 };
 ```
 
 旧バージョンの `SLOW_INDEX_CONFIG` も読み込み互換性のために残していますが、新規設定では `MICRO_SLOW_CONFIG` を使います。
+
+カレンダーは、Google Calendar の CalendarList API で取得できる表示中のカレンダーを読み込みます。primary カレンダーだけでなく、Google Calendar上で表示対象になっている共有カレンダーも対象です。
+
+読み込み対象を固定したい場合は、`config.local.js` でカレンダーIDを指定できます。
+
+```js
+window.MICRO_SLOW_CONFIG.googleCalendarIds = [
+  "primary",
+  "xxxxx@group.calendar.google.com",
+];
+```
+
+古い単一指定の `googleCalendarId` も互換性のために使えます。
 
 Google Cloudのデスクトップアプリ用OAuth Clientでtoken交換時に `client_secret is missing` が出る場合は、`config.local.js` にだけClient Secretを追加します。
 
@@ -42,8 +54,9 @@ Client SecretはGitにコミットしません。
 ## 現在の実装
 
 - 手入力予定、Google Calendar予定の表示
+- primaryカレンダーと表示中の共有カレンダーの読み込み
 - Google Calendar表示中の更新ボタンによる再同期
-- Google Calendar 1時間ごとの自動同期
+- Google Calendar起動直後と毎時00分の自動同期
 - Google Calendar更新時の手入力予定保持
 - 手入力予定の追加と削除
 - 予定ごとの自動開始スキップ切り替え

@@ -511,7 +511,8 @@ async function loadGoogleEvents() {
     const events = await desktop.loadGoogleEvents({
       googleClientId: appConfig.googleClientId,
       googleClientSecret: appConfig.googleClientSecret,
-      googleCalendarId: appConfig.googleCalendarId || "primary",
+      googleCalendarId: appConfig.googleCalendarId,
+      googleCalendarIds: appConfig.googleCalendarIds,
     });
     replaceEventsFromGoogle(events);
     googleStatus.textContent = `${events.length}件の予定を読み込みました。`;

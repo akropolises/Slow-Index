@@ -5,7 +5,7 @@ module.exports = {
   packagerConfig: {
     name: "Slow Index",
     executableName: "Slow Index",
-    icon: "assets/app-icon",
+    icon: "assets/app-icon.ico",
     ignore: [
       "^/config\\.local\\.js$",
       "^/forge\\.config\\.js$",

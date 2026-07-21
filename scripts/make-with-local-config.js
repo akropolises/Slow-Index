@@ -5,7 +5,7 @@ const result = spawnSync("npm", ["run", "make"], {
   shell: process.platform === "win32",
   env: {
     ...process.env,
-    SLOW_INDEX_INCLUDE_LOCAL_CONFIG: "1",
+    MICRO_SLOW_INCLUDE_LOCAL_CONFIG: "1",
   },
 });
 

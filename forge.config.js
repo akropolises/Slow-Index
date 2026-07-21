@@ -3,8 +3,8 @@ const path = require("path");
 
 module.exports = {
   packagerConfig: {
-    name: "Slow Index",
-    executableName: "Slow Index",
+    name: "Micro Slow",
+    executableName: "Micro Slow",
     icon: "assets/app-icon.ico",
     ignore: [
       "^/config\\.local\\.js$",
@@ -16,7 +16,10 @@ module.exports = {
   },
   hooks: {
     packageAfterCopy: async (_config, buildPath) => {
-      if (process.env.SLOW_INDEX_INCLUDE_LOCAL_CONFIG !== "1") {
+      if (
+        process.env.MICRO_SLOW_INCLUDE_LOCAL_CONFIG !== "1" &&
+        process.env.SLOW_INDEX_INCLUDE_LOCAL_CONFIG !== "1"
+      ) {
         return;
       }
 

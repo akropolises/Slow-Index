@@ -1,6 +1,6 @@
 # Contributing
 
-Slow Index is now focused on the Electron desktop prototype. Keep changes small, easy to review, and aligned with the existing plain HTML/CSS/JavaScript renderer plus Electron main process structure.
+Micro Slow is now focused on the Electron desktop prototype. Keep changes small, easy to review, and aligned with the existing plain HTML/CSS/JavaScript renderer plus Electron main process structure.
 
 ## Setup
 

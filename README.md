@@ -1,6 +1,6 @@
-# Slow Index
+# Micro Slow
 
-Slow Indexは、予定前の短い余白にMicro Slowを差し込むElectronデスクトップアプリのプロトタイプです。
+Micro Slowは、予定前の短い余白に短いSlowness体験を差し込むElectronデスクトップアプリのプロトタイプです。
 
 「遅くなれ」と促すのではなく、次の予定を妨げない範囲で、30秒から3分程度の感覚体験を提案します。
 
@@ -20,17 +20,19 @@ Google Calendar連携はElectron main processでOAuthを行います。外部ブ
 Google Cloudでは、デスクトップアプリ用のOAuth Client IDを使います。共有用のClient IDは `config.js` に置きます。
 
 ```js
-window.SLOW_INDEX_CONFIG = {
+window.MICRO_SLOW_CONFIG = {
   googleClientId: "YOUR_DESKTOP_OAUTH_CLIENT_ID",
   googleCalendarId: "primary",
   upcomingWindowMinutes: 7,
 };
 ```
 
+旧バージョンの `SLOW_INDEX_CONFIG` も読み込み互換性のために残していますが、新規設定では `MICRO_SLOW_CONFIG` を使います。
+
 Google Cloudのデスクトップアプリ用OAuth Clientでtoken交換時に `client_secret is missing` が出る場合は、`config.local.js` にだけClient Secretを追加します。
 
 ```js
-window.SLOW_INDEX_CONFIG.googleClientSecret = "YOUR_DESKTOP_OAUTH_CLIENT_SECRET";
+window.MICRO_SLOW_CONFIG.googleClientSecret = "YOUR_DESKTOP_OAUTH_CLIENT_SECRET";
 ```
 
 Client SecretはGitにコミットしません。

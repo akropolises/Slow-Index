@@ -1,10 +1,36 @@
 const microSlows = window.MICRO_SLOWS;
+const appConfig = window.MICRO_SLOW_CONFIG || window.SLOW_INDEX_CONFIG || {};
+const desktop = window.MicroSlowElectron || window.SlowIndexElectron;
+const storageKeys = {
+  source: "micro-slow-source",
+  events: "micro-slow-events",
+  onboarded: "micro-slow-onboarded",
+  recentSlows: "micro-slow-recent-slows",
+};
+const legacyStorageKeys = {
+  source: "slow-index-source",
+  events: "slow-index-events",
+  onboarded: "slow-index-onboarded",
+  recentSlows: "slow-index-recent-slows",
+};
 
-const storedSource = localStorage.getItem("slow-index-source");
+function migrateStorageKey(nextKey, legacyKey) {
+  if (localStorage.getItem(nextKey) !== null || localStorage.getItem(legacyKey) === null) {
+    return;
+  }
+  localStorage.setItem(nextKey, localStorage.getItem(legacyKey));
+}
+
+migrateStorageKey(storageKeys.source, legacyStorageKeys.source);
+migrateStorageKey(storageKeys.events, legacyStorageKeys.events);
+migrateStorageKey(storageKeys.onboarded, legacyStorageKeys.onboarded);
+migrateStorageKey(storageKeys.recentSlows, legacyStorageKeys.recentSlows);
+
+const storedSource = localStorage.getItem(storageKeys.source);
 const storedEvents = readStoredEvents() || [];
 const runtimeEvents = storedEvents.filter((event) => event.source !== "sample");
 if (runtimeEvents.length !== storedEvents.length) {
-  localStorage.setItem("slow-index-events", JSON.stringify(runtimeEvents));
+  localStorage.setItem(storageKeys.events, JSON.stringify(runtimeEvents));
 }
 
 const state = {
@@ -12,7 +38,7 @@ const state = {
   events: runtimeEvents,
   dismissed: new Set(),
   recentSlowIds: readRecentSlowIds(),
-  onboarded: localStorage.getItem("slow-index-onboarded") === "true",
+  onboarded: localStorage.getItem(storageKeys.onboarded) === "true",
   currentProposal: null,
   currentSlow: null,
   timer: null,
@@ -43,7 +69,7 @@ const progressRing = document.querySelector("#progressRing");
 
 function readRecentSlowIds() {
   try {
-    return JSON.parse(localStorage.getItem("slow-index-recent-slows")) || [];
+    return JSON.parse(localStorage.getItem(storageKeys.recentSlows)) || [];
   } catch {
     return [];
   }
@@ -51,19 +77,19 @@ function readRecentSlowIds() {
 
 function readStoredEvents() {
   try {
-    return JSON.parse(localStorage.getItem("slow-index-events"));
+    return JSON.parse(localStorage.getItem(storageKeys.events));
   } catch {
     return null;
   }
 }
 
 function writeStoredEvents() {
-  localStorage.setItem("slow-index-events", JSON.stringify(state.events));
+  localStorage.setItem(storageKeys.events, JSON.stringify(state.events));
 }
 
 function rememberSlow(id) {
   state.recentSlowIds = [id, ...state.recentSlowIds.filter((item) => item !== id)].slice(0, 6);
-  localStorage.setItem("slow-index-recent-slows", JSON.stringify(state.recentSlowIds));
+  localStorage.setItem(storageKeys.recentSlows, JSON.stringify(state.recentSlowIds));
 }
 
 function minutesFromTime(time) {
@@ -91,7 +117,7 @@ function isCurrentEvent(event, minutes = nowMinutes()) {
 function isUpcomingSoon(event, minutes = nowMinutes()) {
   const start = minutesFromTime(event.start);
   const diff = start - minutes;
-  return diff >= 0 && diff <= (window.SLOW_INDEX_CONFIG?.upcomingWindowMinutes || 7);
+  return diff >= 0 && diff <= (appConfig.upcomingWindowMinutes || 7);
 }
 
 function getActivePrompt() {
@@ -157,7 +183,7 @@ function showView(name) {
 
 function activateSource(source) {
   state.source = source;
-  localStorage.setItem("slow-index-source", source);
+  localStorage.setItem(storageKeys.source, source);
   document.querySelectorAll(".toggle-button").forEach((item) => {
     item.classList.toggle("active", item.dataset.source === source);
   });
@@ -178,7 +204,7 @@ function replaceEventsFromGoogle(events) {
 
 function completeOnboarding(source = "google") {
   state.onboarded = true;
-  localStorage.setItem("slow-index-onboarded", "true");
+  localStorage.setItem(storageKeys.onboarded, "true");
   activateSource(source);
   showView("home");
   renderHome();
@@ -257,7 +283,7 @@ function startSlow(proposalId, options = {}) {
   document.querySelector("#slowInstruction").textContent = state.currentSlow.instruction;
   document.querySelector("#slowDuration").textContent = `最大 ${state.currentSlow.seconds}秒`;
   showView("slow");
-  window.SlowIndexElectron?.enterSlowMode?.();
+  desktop?.enterSlowMode?.();
   rememberSlow(state.currentSlow.id);
   runProgress();
 }
@@ -293,11 +319,11 @@ function buildDesktopReminders() {
 }
 
 function syncDesktopReminders() {
-  if (!window.SlowIndexElectron?.setReminders) {
+  if (!desktop?.setReminders) {
     return;
   }
 
-  window.SlowIndexElectron.setReminders(buildDesktopReminders()).catch((error) => {
+  desktop.setReminders(buildDesktopReminders()).catch((error) => {
     console.error("Desktop reminder sync failed.", error);
   });
 }
@@ -359,7 +385,7 @@ function startAutoStartScheduler() {
 
 function startGoogleAutoSync() {
   window.clearInterval(state.googleSyncTimer);
-  if (!window.SlowIndexElectron?.isElectron) {
+  if (!desktop?.isElectron) {
     return;
   }
 
@@ -466,14 +492,14 @@ async function loadGoogleEvents() {
   googleStatus.textContent = "Google Calendarを読み込んでいます。";
   onboardingStatus.classList.add("hidden");
   try {
-    if (!window.SlowIndexElectron?.loadGoogleEvents) {
+    if (!desktop?.loadGoogleEvents) {
       throw new Error("Electron Google Calendar bridge is not available.");
     }
 
-    const events = await window.SlowIndexElectron.loadGoogleEvents({
-      googleClientId: window.SLOW_INDEX_CONFIG?.googleClientId,
-      googleClientSecret: window.SLOW_INDEX_CONFIG?.googleClientSecret,
-      googleCalendarId: window.SLOW_INDEX_CONFIG?.googleCalendarId || "primary",
+    const events = await desktop.loadGoogleEvents({
+      googleClientId: appConfig.googleClientId,
+      googleClientSecret: appConfig.googleClientSecret,
+      googleCalendarId: appConfig.googleCalendarId || "primary",
     });
     replaceEventsFromGoogle(events);
     googleStatus.textContent = `${events.length}件の予定を読み込みました。`;
@@ -496,7 +522,7 @@ document.querySelector("#finishSlowButton").addEventListener("click", finishSlow
 document.querySelector("#completeButton").addEventListener("click", () => {
   showView("home");
   renderHome();
-  window.SlowIndexElectron?.leaveSlowMode?.();
+  desktop?.leaveSlowMode?.();
 });
 document.querySelector("#reloadButton").addEventListener("click", reloadCurrentSource);
 document.querySelector("#googleConnectButton").addEventListener("click", loadGoogleEvents);
@@ -514,7 +540,7 @@ document.querySelectorAll(".sense-button").forEach((button) => {
     window.setTimeout(() => {
       showView("home");
       renderHome();
-      window.SlowIndexElectron?.leaveSlowMode?.();
+      desktop?.leaveSlowMode?.();
     }, 450);
   });
 });
@@ -530,7 +556,7 @@ if (state.onboarded) {
 bootDesktopRuntime();
 startAutoStartScheduler();
 startGoogleAutoSync();
-if (window.SlowIndexElectron?.isElectron) {
-  window.SlowIndexElectron.onStartSlow(startSlowFromExternalTrigger);
+if (desktop?.isElectron) {
+  desktop.onStartSlow(startSlowFromExternalTrigger);
 }
 syncReminderBackends();

@@ -1,6 +1,6 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
-contextBridge.exposeInMainWorld("SlowIndexElectron", {
+const bridge = {
   isElectron: true,
   setReminders(reminders) {
     return ipcRenderer.invoke("set-reminders", reminders);
@@ -25,4 +25,7 @@ contextBridge.exposeInMainWorld("SlowIndexElectron", {
       callback(proposalId);
     });
   },
-});
+};
+
+contextBridge.exposeInMainWorld("MicroSlowElectron", bridge);
+contextBridge.exposeInMainWorld("SlowIndexElectron", bridge);

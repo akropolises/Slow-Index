@@ -11,6 +11,7 @@ const googleCalendarScope = "https://www.googleapis.com/auth/calendar.readonly";
 const googleAuthUrl = "https://accounts.google.com/o/oauth2/v2/auth";
 const googleTokenUrl = "https://oauth2.googleapis.com/token";
 const googleCalendarEventsUrl = "https://www.googleapis.com/calendar/v3/calendars";
+const appIconPath = path.join(__dirname, "assets", "tray-icon.png");
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -20,6 +21,7 @@ function createWindow() {
     minHeight: 600,
     show: false,
     title: "Slow Index",
+    icon: appIconPath,
     backgroundColor: "#fffdf8",
     webPreferences: {
       preload: path.join(__dirname, "electron-preload.js"),
@@ -41,14 +43,7 @@ function createWindow() {
 }
 
 function createTray() {
-  const iconSvg = encodeURIComponent(`
-    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-      <rect width="32" height="32" rx="7" fill="#2e6f65"/>
-      <circle cx="16" cy="16" r="8" fill="#fffdf8"/>
-      <circle cx="16" cy="16" r="4" fill="#d9b66f"/>
-    </svg>
-  `);
-  const icon = nativeImage.createFromDataURL(`data:image/svg+xml,${iconSvg}`);
+  const icon = nativeImage.createFromPath(appIconPath).resize({ width: 16, height: 16 });
   tray = new Tray(icon);
   tray.setToolTip("Slow Index");
   tray.setContextMenu(

@@ -16,6 +16,7 @@ Electron changes usually involve:
 - `electron-main.js`
 - `electron-preload.js`
 - the renderer contract in `app.js`
+- `forge.config.js`, when changing packaged build behavior
 
 ## Local Config
 
@@ -51,13 +52,28 @@ Run:
 npm run check
 ```
 
+For Windows zip packaging:
+
+```powershell
+npm run make
+```
+
+For a local verification build that includes ignored `config.local.js` in the zip:
+
+```powershell
+npm run make:local
+```
+
 Then manually verify the path you touched:
 
-- Demo onboarding
+- Google onboarding
 - Calendar source switching
 - Manual event add
+- Manual event delete
+- Per-event auto-start skip toggle
 - Google Calendar load and refresh, when changing calendar code
 - Automatic start at the scheduled Micro Slow time
+- Fullscreen Micro Slow and minimize-after-finish behavior
 - Electron window foreground behavior from `npm run electron`, when changing desktop code
 - Mobile/narrow layout, when changing HTML or CSS
 

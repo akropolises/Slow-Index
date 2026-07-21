@@ -11,7 +11,7 @@ npm install
 npm run electron
 ```
 
-Electron版では、アプリがバックグラウンドに常駐し、予定5分前になるとウィンドウを表示してMicro Slowを開始します。
+Electron版では、アプリがバックグラウンドに常駐し、予定5分前の開始時刻にウィンドウを全画面表示してMicro Slowを開始します。
 
 ## Google Calendar連携
 
@@ -42,14 +42,18 @@ Client SecretはGitにコミットしません。
 - 手入力予定、Google Calendar予定の表示
 - Google Calendar表示中の更新ボタンによる再同期
 - Google Calendar 1時間ごとの自動同期
+- Google Calendar更新時の手入力予定保持
+- 手入力予定の追加と削除
+- 予定ごとの自動開始スキップ切り替え
 - 予定5分前のMicro Slow提案
-- 予定5分前のウィンドウ前面表示とMicro Slow自動開始
+- 予定5分前の全画面表示とMicro Slow自動開始
 - トレイ常駐
 - ウィンドウを閉じても終了せず、非表示化
 - 18種類のMicro Slow体験
 - 直近に出たMicro Slowを避ける提案ロジック
 - 数字カウントに依存しない円形の進行表示
 - 完了後の移行画面と任意の色入力
+- 色入力または完了後の自動最小化
 
 ## ファイル構成
 
@@ -58,6 +62,10 @@ Client SecretはGitにコミットしません。
 - `app.js`: renderer側の予定管理、提案生成、Micro Slow実行ロジック
 - `electron-main.js`: Electron main process、常駐、最前面表示、Google OAuth、Calendar API読み込み
 - `electron-preload.js`: Electron preload bridge
+- `forge.config.js`: Electron ForgeのWindows zipビルド設定
+- `scripts/make-with-local-config.js`: `config.local.js` を成果物にだけ含める検証用ビルドスクリプト
+- `assets/tray-icon.png`: Trayとウィンドウで使うアプリアイコン
+- `assets/app-icon.ico`: Windowsビルド用アイコン
 - `micro-slows.js`: アプリが読み込むMicro Slowデータ
 - `config.js`: 共有用の既定設定
 - `config.example.js`: 個人設定ファイルのひな形
@@ -99,7 +107,8 @@ Micro Slowは、予定の前に短い感覚体験を置くことで、焦りや�
 
 ## まだやっていないこと
 
-- Electron版の配布用ビルド、署名、インストーラー
+- Windows zip以外の配布形式
+- コード署名、インストーラー
 - OS起動時の自動起動設定UI
 - 予定種別ごとのMicro Slow最適化
 - ユーザータイプ分類

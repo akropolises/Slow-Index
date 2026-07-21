@@ -653,6 +653,7 @@ async function loadGoogleEvents() {
     try {
       const events = await window.SlowIndexElectron.loadGoogleEvents({
         googleClientId: window.SLOW_INDEX_CONFIG?.googleClientId,
+        googleClientSecret: window.SLOW_INDEX_CONFIG?.googleClientSecret,
         googleCalendarId: window.SLOW_INDEX_CONFIG?.googleCalendarId || "primary",
       });
       state.events = events;

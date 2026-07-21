@@ -81,6 +81,14 @@ Web版では「ウェブアプリケーション」用Client IDを使い、Elect
 
 Electron版でログイン後に読み込み失敗する場合は、`config.js` のClient IDがGoogle Cloudで「デスクトップアプリ」として作られているか確認してください。「ウェブアプリケーション」用Client IDをElectron版に使うと、認可後のtoken交換で失敗します。
 
+Google Cloudのデスクトップアプリ用OAuth ClientにClient Secretが表示されている場合は、`config.local.js` にだけ追加してください。
+
+```js
+window.SLOW_INDEX_CONFIG.googleClientSecret = "YOUR_DESKTOP_OAUTH_CLIENT_SECRET";
+```
+
+Client SecretはGitにコミットしません。
+
 Google Cloud側では、JavaScript originに実際に開くURLを登録します。
 
 ```text
@@ -138,6 +146,7 @@ http://localhost:8000/
 
 ```js
 window.SLOW_INDEX_CONFIG.googleClientId = "YOUR_GOOGLE_OAUTH_CLIENT_ID";
+window.SLOW_INDEX_CONFIG.googleClientSecret = "YOUR_DESKTOP_OAUTH_CLIENT_SECRET";
 window.SLOW_INDEX_CONFIG.googleCalendarId = "primary";
 window.SLOW_INDEX_CONFIG.pushPublicKey = "YOUR_VAPID_PUBLIC_KEY";
 ```

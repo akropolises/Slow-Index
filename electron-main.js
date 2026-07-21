@@ -195,12 +195,21 @@ function startLoopbackServer() {
   });
 }
 
-async function exchangeCodeForTokens({ clientId, code, codeVerifier, redirectUri }) {
+function buildTokenParams(params) {
+  const tokenParams = new URLSearchParams(params);
+  if (!tokenParams.get("client_secret")) {
+    tokenParams.delete("client_secret");
+  }
+  return tokenParams;
+}
+
+async function exchangeCodeForTokens({ clientId, clientSecret, code, codeVerifier, redirectUri }) {
   const response = await fetch(googleTokenUrl, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
+    body: buildTokenParams({
       client_id: clientId,
+      client_secret: clientSecret || "",
       code,
       code_verifier: codeVerifier,
       redirect_uri: redirectUri,
@@ -214,12 +223,13 @@ async function exchangeCodeForTokens({ clientId, code, codeVerifier, redirectUri
   return response.json();
 }
 
-async function refreshAccessToken(clientId, refreshToken) {
+async function refreshAccessToken(clientId, clientSecret, refreshToken) {
   const response = await fetch(googleTokenUrl, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
+    body: buildTokenParams({
       client_id: clientId,
+      client_secret: clientSecret || "",
       refresh_token: refreshToken,
       grant_type: "refresh_token",
     }),
@@ -232,14 +242,14 @@ async function refreshAccessToken(clientId, refreshToken) {
   return response.json();
 }
 
-async function getGoogleAccessToken(clientId) {
+async function getGoogleAccessToken(clientId, clientSecret) {
   const stored = readStoredTokens();
   if (stored?.refresh_token && stored.expires_at && stored.expires_at > Date.now() + 60000) {
     return stored.access_token;
   }
 
   if (stored?.refresh_token) {
-    const refreshed = await refreshAccessToken(clientId, stored.refresh_token);
+    const refreshed = await refreshAccessToken(clientId, clientSecret, stored.refresh_token);
     const next = {
       ...stored,
       ...refreshed,
@@ -250,10 +260,10 @@ async function getGoogleAccessToken(clientId) {
     return next.access_token;
   }
 
-  return authorizeGoogle(clientId);
+  return authorizeGoogle(clientId, clientSecret);
 }
 
-async function authorizeGoogle(clientId) {
+async function authorizeGoogle(clientId, clientSecret) {
   const { verifier, challenge } = createPkcePair();
   const { redirectUri, waitForCode } = await startLoopbackServer();
   const authUrl = new URL(googleAuthUrl);
@@ -272,6 +282,7 @@ async function authorizeGoogle(clientId) {
   const code = await waitForCode;
   const tokens = await exchangeCodeForTokens({
     clientId,
+    clientSecret,
     code,
     codeVerifier: verifier,
     redirectUri,
@@ -284,12 +295,12 @@ async function authorizeGoogle(clientId) {
   return stored.access_token;
 }
 
-async function listTodayGoogleEvents({ clientId, calendarId = "primary" }) {
+async function listTodayGoogleEvents({ clientId, clientSecret, calendarId = "primary" }) {
   if (!clientId) {
     throw new Error("Missing Google OAuth Client ID.");
   }
 
-  const accessToken = await getGoogleAccessToken(clientId);
+  const accessToken = await getGoogleAccessToken(clientId, clientSecret);
   const now = new Date();
   const start = new Date(now);
   start.setHours(0, 0, 0, 0);
@@ -349,6 +360,7 @@ ipcMain.handle("show-window", () => {
 ipcMain.handle("load-google-events", (_event, config) => {
   return listTodayGoogleEvents({
     clientId: config?.googleClientId,
+    clientSecret: config?.googleClientSecret,
     calendarId: config?.googleCalendarId || "primary",
   });
 });

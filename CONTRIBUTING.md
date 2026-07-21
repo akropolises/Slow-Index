@@ -57,10 +57,12 @@ Copy-Item config.example.js config.local.js
 Use `config.local.js` for:
 
 - Google OAuth Client ID
+- Google OAuth Client Secret, for Electron desktop clients that require it
 - Google Calendar ID, if not `primary`
 - VAPID Public Key
 
 Use a Web application OAuth Client ID for the browser version. Use a Desktop app OAuth Client ID for the Electron version.
+Do not commit Google OAuth Client Secret values.
 
 ## Branches
 

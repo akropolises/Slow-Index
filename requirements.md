@@ -156,6 +156,7 @@ Slow Indexは、Fastな生活リズムを持つ人に対して、生活や予定
 - 通知はService WorkerとWeb Pushで扱う。
 - 通知なしの前面表示体験はElectron版で検証する。
 - Electron版のGoogle Calendar連携はmain processでOAuthとCalendar API読み込みを行う。
+- Electron版ではGoogle Calendar表示中に更新ボタンで再同期し、1時間ごとにも自動同期する。
 - Micro Slowの体験表現はHTML/CSS中心で実装する。
 - カレンダー予定の作成・編集は行わない。
 - 感覚入力は任意の色選択として残す。

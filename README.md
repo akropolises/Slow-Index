@@ -103,6 +103,8 @@ Electron版のGoogle OAuth tokenは、ElectronのuserDataディレクトリに�
 ## 現在の実装
 
 - ダミー予定、手入力予定、Google Calendar予定の表示
+- Google Calendar表示中の更新ボタンによる再同期
+- Electron版でのGoogle Calendar 1時間ごとの自動同期
 - 予定5分前のMicro Slow提案
 - ページを開いている状態でのMicro Slow自動開始
 - ページを閉じた状態でのWeb Push通知

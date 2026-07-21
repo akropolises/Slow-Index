@@ -8,7 +8,7 @@ const sampleEvents = [
 ];
 
 const state = {
-  source: "sample",
+  source: localStorage.getItem("slow-index-source") || "sample",
   events: readStoredEvents() || [...sampleEvents],
   dismissed: new Set(),
   recentSlowIds: readRecentSlowIds(),
@@ -17,6 +17,7 @@ const state = {
   currentSlow: null,
   timer: null,
   schedulerTimer: null,
+  googleSyncTimer: null,
   serviceWorkerRegistration: null,
   startedAt: 0,
   view: null,
@@ -162,11 +163,21 @@ function showView(name) {
 
 function activateSource(source) {
   state.source = source;
+  localStorage.setItem("slow-index-source", source);
   document.querySelectorAll(".toggle-button").forEach((item) => {
     item.classList.toggle("active", item.dataset.source === source);
   });
   manualForm.classList.toggle("hidden", source !== "manual");
   googleConnect.classList.toggle("hidden", source !== "google");
+}
+
+function replaceEventsFromGoogle(events) {
+  state.events = events;
+  writeStoredEvents();
+  state.dismissed.clear();
+  state.startedAutomatically.clear();
+  activateSource("google");
+  syncReminderBackends();
 }
 
 function completeOnboarding(source = "sample") {
@@ -586,6 +597,28 @@ function startNotificationScheduler() {
   startDueSlow();
 }
 
+function startGoogleAutoSync() {
+  window.clearInterval(state.googleSyncTimer);
+  if (!window.SlowIndexElectron?.isElectron) {
+    return;
+  }
+
+  state.googleSyncTimer = window.setInterval(() => {
+    if (state.source !== "google" || state.view === "slow" || state.view === "transition") {
+      return;
+    }
+    loadGoogleEvents();
+  }, 60 * 60 * 1000);
+}
+
+function reloadCurrentSource() {
+  if (state.source === "google") {
+    loadGoogleEvents();
+    return;
+  }
+  renderHome();
+}
+
 function runProgress() {
   window.clearInterval(state.timer);
   state.startedAt = Date.now();
@@ -656,13 +689,11 @@ async function loadGoogleEvents() {
         googleClientSecret: window.SLOW_INDEX_CONFIG?.googleClientSecret,
         googleCalendarId: window.SLOW_INDEX_CONFIG?.googleCalendarId || "primary",
       });
-      state.events = events;
-      writeStoredEvents();
-      state.dismissed.clear();
-      state.startedAutomatically.clear();
+      replaceEventsFromGoogle(events);
       googleStatus.textContent = `${events.length}件の予定を読み込みました。`;
-      completeOnboarding("google");
-      syncReminderBackends();
+      if (!state.onboarded) {
+        completeOnboarding("google");
+      }
       renderHome();
     } catch (error) {
       const detail = error?.message ? ` ${error.message}` : "";
@@ -684,13 +715,11 @@ async function loadGoogleEvents() {
   onboardingStatus.classList.add("hidden");
   try {
     const events = await window.SlowIndexGoogleCalendar.listTodayEvents();
-    state.events = events;
-    writeStoredEvents();
-    state.dismissed.clear();
-    state.startedAutomatically.clear();
+    replaceEventsFromGoogle(events);
     googleStatus.textContent = `${events.length}件の予定を読み込みました。`;
-    completeOnboarding("google");
-    syncReminderBackends();
+    if (!state.onboarded) {
+      completeOnboarding("google");
+    }
     renderHome();
   } catch (error) {
     googleStatus.textContent = "Google Calendarを読み込めませんでした。設定と許可を確認してください。";
@@ -706,7 +735,7 @@ document.querySelector("#completeButton").addEventListener("click", () => {
   showView("home");
   renderHome();
 });
-document.querySelector("#reloadButton").addEventListener("click", renderHome);
+document.querySelector("#reloadButton").addEventListener("click", reloadCurrentSource);
 document.querySelector("#googleConnectButton").addEventListener("click", loadGoogleEvents);
 document.querySelector("#onboardingGoogleButton").addEventListener("click", loadGoogleEvents);
 document.querySelector("#onboardingDemoButton").addEventListener("click", () => completeOnboarding("sample"));
@@ -747,6 +776,7 @@ document.querySelectorAll(".sense-button").forEach((button) => {
 
 manualForm.addEventListener("submit", addManualEvent);
 if (state.onboarded) {
+  activateSource(state.source);
   showView("home");
   renderHome();
 } else {
@@ -755,6 +785,7 @@ if (state.onboarded) {
 updateNotificationStatus();
 bootNotifications();
 startNotificationScheduler();
+startGoogleAutoSync();
 if (window.SlowIndexElectron?.isElectron) {
   window.SlowIndexElectron.onStartSlow(startSlowFromNotification);
 }

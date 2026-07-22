@@ -42,6 +42,7 @@ const state = {
   currentProposal: null,
   currentSlow: null,
   timer: null,
+  transitionTimer: null,
   schedulerTimer: null,
   googleSyncTimer: null,
   startedAt: 0,
@@ -434,6 +435,7 @@ function runProgress() {
 
 function finishSlow() {
   window.clearInterval(state.timer);
+  window.clearTimeout(state.transitionTimer);
   const event = state.currentProposal?.event;
   if (event) {
     state.dismissed.add(event.id);
@@ -442,6 +444,14 @@ function finishSlow() {
     document.querySelector("#transitionText").textContent = `${event.title}まで、まだ約${remaining}分あります。`;
   }
   showView("transition");
+  state.transitionTimer = window.setTimeout(completeTransition, 60000);
+}
+
+function completeTransition() {
+  window.clearTimeout(state.transitionTimer);
+  showView("home");
+  renderHome();
+  desktop?.leaveSlowMode?.();
 }
 
 function handleProposalAction(event) {
@@ -532,11 +542,7 @@ async function loadGoogleEvents() {
 
 document.querySelector("#calendarDay").addEventListener("click", handleProposalAction);
 document.querySelector("#finishSlowButton").addEventListener("click", finishSlow);
-document.querySelector("#completeButton").addEventListener("click", () => {
-  showView("home");
-  renderHome();
-  desktop?.leaveSlowMode?.();
-});
+document.querySelector("#completeButton").addEventListener("click", completeTransition);
 document.querySelector("#reloadButton").addEventListener("click", reloadCurrentSource);
 document.querySelector("#googleConnectButton").addEventListener("click", loadGoogleEvents);
 document.querySelector("#onboardingGoogleButton").addEventListener("click", loadGoogleEvents);
@@ -551,11 +557,21 @@ document.querySelectorAll(".sense-button").forEach((button) => {
     document.querySelectorAll(".sense-button").forEach((item) => item.classList.remove("selected"));
     button.classList.add("selected");
     window.setTimeout(() => {
-      showView("home");
-      renderHome();
-      desktop?.leaveSlowMode?.();
+      completeTransition();
     }, 450);
   });
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") {
+    return;
+  }
+  event.preventDefault();
+  if (state.view === "slow") {
+    finishSlow();
+  } else if (state.view === "transition") {
+    completeTransition();
+  }
 });
 
 manualForm.addEventListener("submit", addManualEvent);

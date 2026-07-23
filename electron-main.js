@@ -2,10 +2,11 @@
 const fs = require("fs");
 const http = require("http");
 const crypto = require("crypto");
-const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, shell } = require("electron");
+const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, shell, powerMonitor } = require("electron");
 
 let mainWindow = null;
 let tray = null;
+let shouldSyncOnNextShow = false;
 const reminderTimers = new Map();
 const googleCalendarScope = "https://www.googleapis.com/auth/calendar.readonly";
 const googleAuthUrl = "https://accounts.google.com/o/oauth2/v2/auth";
@@ -69,6 +70,10 @@ function showMainWindow() {
     mainWindow.restore();
   }
   mainWindow.show();
+  if (shouldSyncOnNextShow) {
+    shouldSyncOnNextShow = false;
+    mainWindow.webContents.send("electron-refresh-google-events");
+  }
   mainWindow.setAlwaysOnTop(true, "screen-saver");
   mainWindow.focus();
   setTimeout(() => {
@@ -494,6 +499,10 @@ app.whenReady().then(() => {
   createTray();
   app.setLoginItemSettings({
     openAtLogin: false,
+  });
+
+  powerMonitor.on("resume", () => {
+    shouldSyncOnNextShow = true;
   });
 
   app.on("activate", () => {

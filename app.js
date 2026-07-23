@@ -410,12 +410,15 @@ function startGoogleAutoSync() {
   scheduleNextHourlySync();
 }
 
-function reloadCurrentSource() {
-  if (state.source === "google") {
-    loadGoogleEvents();
+function reloadGoogleEvents() {
+  loadGoogleEvents();
+}
+
+function refreshGoogleEventsAfterResume() {
+  if (!state.onboarded || state.view === "slow" || state.view === "transition") {
     return;
   }
-  renderHome();
+  loadGoogleEvents();
 }
 
 function runProgress() {
@@ -543,7 +546,7 @@ async function loadGoogleEvents() {
 document.querySelector("#calendarDay").addEventListener("click", handleProposalAction);
 document.querySelector("#finishSlowButton").addEventListener("click", finishSlow);
 document.querySelector("#completeButton").addEventListener("click", completeTransition);
-document.querySelector("#reloadButton").addEventListener("click", reloadCurrentSource);
+document.querySelector("#reloadButton").addEventListener("click", reloadGoogleEvents);
 document.querySelector("#googleConnectButton").addEventListener("click", loadGoogleEvents);
 document.querySelector("#onboardingGoogleButton").addEventListener("click", loadGoogleEvents);
 document.querySelectorAll(".toggle-button").forEach((button) => {
@@ -587,5 +590,6 @@ startAutoStartScheduler();
 startGoogleAutoSync();
 if (desktop?.isElectron) {
   desktop.onStartSlow(startSlowFromExternalTrigger);
+  desktop.onRefreshGoogleEvents?.(refreshGoogleEventsAfterResume);
 }
 syncReminderBackends();

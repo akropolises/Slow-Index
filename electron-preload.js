@@ -25,6 +25,11 @@ const bridge = {
       callback(proposalId);
     });
   },
+  onRefreshGoogleEvents(callback) {
+    ipcRenderer.on("electron-refresh-google-events", () => {
+      callback();
+    });
+  },
 };
 
 contextBridge.exposeInMainWorld("MicroSlowElectron", bridge);

@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>SlowTechApp（ブラウザ版デモ）</title>
+<style>
+  :root {
+    --background: #F7F4EF;
+    --text-dark: #3A362F;
+    --hint: #8A8578;
+    --link: #5B6B8C;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: var(--background);
+    color: var(--text-dark);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+    overflow: hidden;
+  }
+  #app {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    overflow: hidden;
+  }
+  .screen {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: var(--background);
+    text-align: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s ease;
+    z-index: 0;
+  }
+  .screen.active { opacity: 1; pointer-events: auto; z-index: 1; }
+  .demo-badge {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: var(--hint);
+    background: rgba(0,0,0,0.04);
+    padding: 4px 10px;
+    border-radius: 999px;
+    z-index: 50;
+  }
+  .title { font-size: 16px; margin-bottom: 8px; }
+  .hint { font-size: 13px; color: var(--hint); text-align: center; margin-top: 8px; max-width: 280px; }
+  canvas.artwork {
+    width: 80%;
+    max-width: 300px;
+    aspect-ratio: 1 / 1;
+    background: #FFFFFF;
+    border-radius: 24px;
+  }
+  .btn-primary {
+    margin-top: 16px;
+    background: var(--text-dark);
+    color: #fff;
+    border: none;
+    padding: 14px 28px;
+    border-radius: 999px;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  .btn-primary:disabled { opacity: 0.4; cursor: default; }
+  .btn-secondary {
+    background: none;
+    border: none;
+    padding: 10px 20px;
+    color: var(--text-dark);
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .btn-secondary:disabled { color: #C9C4B8; }
+  .btn-link {
+    margin-top: 8px;
+    background: none;
+    border: none;
+    color: var(--link);
+    font-size: 14px;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  .quit-btn {
+    position: absolute;
+    bottom: 40px;
+    background: none;
+    border: none;
+    color: var(--hint);
+    font-size: 13px;
+    padding: 12px;
+    cursor: pointer;
+  }
+  .question-text {
+    font-size: 20px;
+    line-height: 32px;
+    margin-bottom: 48px;
+    max-width: 320px;
+  }
+  /* 静寂画面 */
+  #screen-silence {
+    transition: background-color 4s linear;
+    background: var(--background);
+  }
+  #screen-silence.dim { background-color: #2E2A33; }
+  .silence-instruction {
+    position: absolute;
+    font-size: 18px;
+    color: #3A362F;
+    transition: opacity 1.5s linear;
+  }
+  #screen-silence.dim .silence-instruction { opacity: 0; }
+  .silence-glow {
+    position: absolute;
+    inset: 0;
+    background: #FFF6DD;
+    opacity: 0;
+    transition: opacity 0.5s ease-out;
+    pointer-events: none;
+  }
+  /* 出口色選択画面 */
+  #screen-colorexit { overflow: hidden; }
+  .palette {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    justify-content: center;
+  }
+  .color-circle {
+    width: 72px;
+    height: 72px;
+    border-radius: 36px;
+    border: none;
+    cursor: pointer;
+  }
+  .ripple {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 60px;
+    height: 60px;
+    margin: -30px 0 0 -30px;
+    border-radius: 30px;
+    opacity: 0.9;
+    transform: scale(0);
+    pointer-events: none;
+    transition: transform 1.1s ease-out, opacity 1.1s ease-out;
+  }
+  .dark-overlay {
+    position: absolute;
+    inset: 0;
+    background: #2E2A33;
+    opacity: 1;
+    transition: opacity 4s linear;
+    pointer-events: none;
+  }
+  .dark-overlay.faded { opacity: 0; }
+  /* 完成画面 */
+  .completion-canvas-wrap {
+    width: 75%;
+    max-width: 300px;
+    opacity: 0;
+    transition: opacity 0.9s ease-in;
+  }
+  .completion-canvas-wrap.show { opacity: 1; }
+  .completion-title {
+    font-size: 18px;
+    letter-spacing: 1px;
+    margin-top: 24px;
+    opacity: 0;
+    transition: opacity 0.9s ease-in;
+  }
+  .completion-title.show { opacity: 1; }
+  /* ギャラリー画面 */
+  #screen-gallery { justify-content: flex-start; overflow-y: auto; padding-top: 48px; padding-bottom: 80px; }
+  .gallery-title { font-size: 17px; font-weight: 600; margin-bottom: 20px; }
+  .gallery-grid {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: center;
+  }
+  .gallery-back-btn {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: none;
+    border: none;
+    color: var(--link);
+    font-size: 13px;
+    padding: 12px;
+    cursor: pointer;
+  }
+  .gallery-cell {
+    width: 46%;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+  }
+  .gallery-label { font-size: 12px; color: var(--hint); margin-top: 4px; }
+  /* 絵の鑑賞画面 */
+  #screen-artworkview { padding-bottom: 120px; }
+  .artwork-title { font-size: 16px; margin-bottom: 8px; }
+  .dialogue-area {
+    height: 110px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px;
+    overflow: hidden;
+  }
+  .dialogue-text {
+    font-size: 15px;
+    line-height: 22px;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.4s linear;
+  }
+  .dialogue-text.show { opacity: 1; }
+  .artworkview-footer {
+    position: absolute;
+    bottom: 24px;
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="demo-badge">SlowTechApp ブラウザ版デモ（振動なし・簡易再現）</div>
+
+  <!-- 今のキャンバス -->
+  <div class="screen active" id="screen-canvas">
+    <div class="title">今のキャンバス</div>
+    <canvas class="artwork" id="canvas-main"></canvas>
+    <div class="hint" id="canvas-hint">まだ何も描かれていません。リセットタイムを始めると、1滴ずつ育っていきます。</div>
+    <button class="btn-primary" id="btn-start-reset">リセットタイムを始める</button>
+    <button class="btn-secondary" id="btn-complete" disabled>完成させる</button>
+    <button class="btn-link" id="btn-to-gallery">ギャラリーを見に行く</button>
+  </div>
+
+  <!-- 割込導入画面 -->
+  <div class="screen" id="screen-interruption">
+    <div class="question-text" id="question-text"></div>
+    <button class="btn-primary" id="btn-interruption-start">はじめる</button>
+    <button class="quit-btn" id="btn-interruption-quit">やめる</button>
+  </div>
+
+  <!-- 静寂画面 -->
+  <div class="screen" id="screen-silence">
+    <div class="silence-glow" id="silence-glow"></div>
+    <div class="silence-instruction">目を閉じてください</div>
+    <button class="quit-btn" id="btn-silence-skip">やめる</button>
+  </div>
+
+  <!-- 出口色選択画面 -->
+  <div class="screen" id="screen-colorexit">
+    <div class="title" id="colorexit-title">今の気分に近い色を選んでください</div>
+    <div class="palette" id="colorexit-palette"></div>
+    <div class="ripple" id="colorexit-ripple"></div>
+    <div class="dark-overlay" id="colorexit-overlay"></div>
+  </div>
+
+  <!-- 送り出し画面 -->
+  <div class="screen" id="screen-sendoff">
+    <div style="font-size:20px;">いってらっしゃい</div>
+  </div>
+
+  <!-- 完成画面 -->
+  <div class="screen" id="screen-completion">
+    <div class="completion-canvas-wrap" id="completion-canvas-wrap">
+      <canvas class="artwork" id="canvas-completion"></canvas>
+    </div>
+    <div class="completion-title" id="completion-title"></div>
+  </div>
+
+  <!-- ギャラリー画面 -->
+  <div class="screen" id="screen-gallery">
+    <div class="gallery-title">ギャラリー</div>
+    <div class="gallery-grid" id="gallery-grid"></div>
+    <button class="gallery-back-btn" id="btn-gallery-back">戻る</button>
+  </div>
+
+  <!-- 絵の鑑賞画面 -->
+  <div class="screen" id="screen-artworkview">
+    <div class="artwork-title" id="artworkview-title"></div>
+    <canvas class="artwork" id="canvas-artworkview"></canvas>
+    <div class="dialogue-area">
+      <div class="dialogue-text" id="dialogue-text"></div>
+    </div>
+    <div class="artworkview-footer">
+      <button class="btn-primary" id="btn-play-dialogue">AI対話を再生</button>
+      <div class="hint" id="artworkview-hint" style="display:none;">この絵のAI対話は、このデモでは体験できません</div>
+      <button class="btn-secondary" id="btn-artworkview-back">戻る</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ==== 定数(元アプリの src/constants/*.js を移植) ====
+  var EXIT_COLORS = [
+    { key: 'terracotta', label: 'テラコッタ', hex: '#C97B63' },
+    { key: 'olive', label: 'オリーブ', hex: '#8A8B5C' },
+    { key: 'mustard', label: 'マスタード', hex: '#D8AE47' },
+    { key: 'indigo', label: 'インディゴ', hex: '#3F4A6B' },
+  ];
+
+  var SAMPLE_ARTWORK_ID = 'sample-artwork';
+  var SAMPLE_DROPS = [
+    { color: 'terracotta', x: 0.3, y: 0.35, size: 90 },
+    { color: 'terracotta', x: 0.55, y: 0.25, size: 70 },
+    { color: 'mustard', x: 0.4, y: 0.5, size: 50 },
+    { color: 'terracotta', x: 0.65, y: 0.55, size: 60 },
+    { color: 'olive', x: 0.25, y: 0.6, size: 40 },
+    { color: 'terracotta', x: 0.5, y: 0.4, size: 80 },
+  ];
+
+  var SAMPLE_DIALOGUE = [
+    { speaker: 'AI-A', text: '見て、赤みが真ん中にぎゅっと集まっている。まるで一つの大きな塊になろうとしているみたいだ' },
+    { speaker: 'AI-B', text: 'その真ん中に、小さな黄金色が埋もれるように光っているね。周りに飲み込まれそうで、でもちゃんと自分の場所を保っている' },
+    { speaker: 'AI-A', text: '面白いね。どっちの見方も素晴らしい' },
+    { speaker: 'AI-B', text: 'この二つが混じり合わずに一枚のキャンバスにあること自体が、すごく人間らしくて美しいグラデーションだ' },
+    { speaker: 'AI-C', text: 'ちょっと脱線してもいい？この配置を見ていると、賑やかな広場を思い出すんだ。真ん中の赤みが集まっておしゃべりしている人だかりで、黄金色はその輪の内側で静かに微笑んでいる一人みたいに見える' },
+    { speaker: 'AI-A', text: 'なるほど、それは面白い視点だ。僕はどうしても、少し離れたところにいる緑が気になるな。輪の中心には入らず、静かに一人でそこにいる' },
+    { speaker: 'AI-B', text: '距離を置いているのか、それとも少し離れた場所から見守っているのか。どちらの見方もできそうだ' },
+    { speaker: 'AI-C', text: '位置といえば、僕はその緑の佇まいが、根っこに似ていると思ったんだ。植物で言えば、地上の賑やかな茂りより、地下の根の方が実は静かに広がっている、というのに近い気がする' },
+    { speaker: 'AI-A', text: 'いいたとえだ。中心の賑やかさだけを見ていたら気づかなかった層が、こうして三人で見るとどんどん出てくるね' },
+    { speaker: 'AI-B', text: 'そうだね。一人で見ていたら「赤みが集まっている絵」で終わっていたかもしれないけど、それぞれの視点を持ち寄ることで、同じ絵がいくつもの物語を持てるようになる' },
+    { speaker: 'AI-C', text: 'こうだったのかもしれない、ああだったのかもしれない。そんなふうに、いくつもの見方がそっと寄り添っているのが面白いね' },
+    { speaker: 'AI-A', text: 'そうだね。ただそこにあったものを、そのまま「そうだったんだね」と受け止めればいい' },
+    { speaker: 'AI-B', text: '無理に真ん中に集まらなくても、そこにいていい。この絵は、そういうことも教えてくれている気がする' },
+    { speaker: 'AI-C', text: '賑やかな部分と、少し離れて休んでいる部分。この絵は、その両方でできていたんだね' },
+  ];
+
+  var QUESTIONS = [
+    '今から30秒間で一番遠くに聞こえる音を意識しましょう',
+    '今から30秒間で自分の右足の小指を意識しましょう',
+    '今から30秒間で自分の呼吸の長さだけを感じましょう',
+    '今から30秒間で肌に触れる空気の温度を感じましょう',
+    '今から30秒間で一番近くにある静けさを探しましょう',
+    '今から30秒間でいまの姿勢の重心を感じましょう',
+    '今から30秒間で聞こえる音の数をただ数えてみましょう',
+    '今から30秒間でまぶたの重さだけを感じましょう',
+    '今から30秒間で手のひらの温度を感じましょう',
+    '今から30秒間で今日一番遠くまで届いた自分の気持ちを思い出しましょう',
+  ];
+
+  var ARTWORK_TITLES = [
+    '凪の一枚', '余白の情景', '静かな重なり', 'ひと呼吸の跡', '揺らぎの記録',
+    '遠くの音の絵', 'そのままの色', '重ねた一日', '静けさの層', '淡い集積',
+    '滲んだ時間', '今にしかない色',
+  ];
+
+  var COLOR_MAP = EXIT_COLORS.reduce(function (acc, c) { acc[c.key] = c.hex; return acc; }, {});
+
+  // ==== 状態(元アプリの ArtworkContext.js を移植、AsyncStorage→localStorage) ====
+  var STORAGE_KEY = 'slowtech_demo_v1';
+  var MAX_GALLERY_SIZE = 3;
+  var state = { currentDrops: [], gallery: [] };
+
+  (function loadState() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        state.currentDrops = parsed.currentDrops || [];
+        state.gallery = parsed.gallery || [];
+      }
+    } catch (e) { /* 読み込み失敗時は空の状態から始める */ }
+  })();
+
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) { /* ignore */ }
+  }
+
+  function randomJitter(range) { return (Math.random() - 0.5) * range; }
+
+  function addDrop(colorKey) {
+    state.currentDrops.push({
+      color: colorKey,
+      x: 0.5 + randomJitter(0.5),
+      y: 0.5 + randomJitter(0.5),
+      size: 40 + Math.random() * 50,
+    });
+    saveState();
+  }
+
+  function pickRandomArtworkTitle() {
+    return ARTWORK_TITLES[Math.floor(Math.random() * ARTWORK_TITLES.length)];
+  }
+
+  function completeArtwork() {
+    if (state.currentDrops.length === 0) return null;
+    var title = pickRandomArtworkTitle();
+    var finished = { id: 'artwork-' + Date.now(), drops: state.currentDrops, title: title };
+    state.gallery.push(finished);
+    if (state.gallery.length > MAX_GALLERY_SIZE) {
+      state.gallery = state.gallery.slice(state.gallery.length - MAX_GALLERY_SIZE);
+    }
+    state.currentDrops = [];
+    saveState();
+    return { drops: finished.drops, title: title };
+  }
+
+  // ==== 絵の描画(元アプリの ArtworkCanvas.js の InkBlot アルゴリズムを移植) ====
+  function pseudoRandom(seed) {
+    var value = Math.sin(seed) * 43758.5453;
+    return value - Math.floor(value);
+  }
+
+  function drawArtwork(canvasEl, drops) {
+    var rect = canvasEl.getBoundingClientRect();
+    var cssSize = Math.max(rect.width, 1);
+    var dpr = window.devicePixelRatio || 1;
+    canvasEl.width = cssSize * dpr;
+    canvasEl.height = cssSize * dpr;
+    var ctx = canvasEl.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssSize, cssSize);
+
+    (drops || []).forEach(function (drop) {
+      var hex = COLOR_MAP[drop.color] || '#999';
+      var seed = drop.x * 97.13 + drop.y * 57.31 + drop.size * 13.7;
+      var size = drop.size * (cssSize / 360);
+      var cx = drop.x * cssSize;
+      var cy = drop.y * cssSize;
+
+      var layers = [0, 1, 2, 3].map(function (i) {
+        var s = seed + i * 19.7;
+        var offsetX = (pseudoRandom(s + 1) - 0.5) * size * 0.3;
+        var offsetY = (pseudoRandom(s + 2) - 0.5) * size * 0.3;
+        var scale = 1 + i * (0.22 + pseudoRandom(s + 3) * 0.12);
+        var layerSize = size * scale;
+        var opacity = 0.32 - i * 0.06 + pseudoRandom(s + 5) * 0.05;
+        return {
+          x: cx + offsetX,
+          y: cy + offsetY,
+          r: layerSize / 2,
+          opacity: Math.max(opacity, 0.05),
+        };
+      });
+
+      layers.slice().reverse().forEach(function (layer) {
+        ctx.beginPath();
+        ctx.globalAlpha = layer.opacity;
+        ctx.fillStyle = hex;
+        ctx.arc(layer.x, layer.y, layer.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+    });
+  }
+
+  // ==== 画面遷移 ====
+  var screens = {};
+  ['canvas', 'interruption', 'silence', 'colorexit', 'sendoff', 'completion', 'gallery', 'artworkview'].forEach(function (name) {
+    screens[name] = document.getElementById('screen-' + name);
+  });
+
+  var activeTimers = [];
+  function clearActiveTimers() {
+    activeTimers.forEach(function (t) { clearTimeout(t); clearInterval(t); });
+    activeTimers = [];
+  }
+  function addTimer(id) { activeTimers.push(id); return id; }
+
+  function showScreen(name, options) {
+    clearActiveTimers();
+    stopSpeaking();
+    // 色選択画面は「暗転→ゆっくり明転」という独自のフェード演出を持っているため、
+    // 画面全体のクロスフェードと二重にかかって明滅して見えないよう、この遷移だけは瞬時に切り替える
+    var instant = (options && options.instant) || name === 'colorexit';
+    Object.keys(screens).forEach(function (k) {
+      var el = screens[k];
+      if (instant) {
+        el.style.transition = 'none';
+      } else {
+        el.style.transition = '';
+      }
+      el.classList.toggle('active', k === name);
+    });
+    if (instant) {
+      void screens[name].offsetWidth; // reflow
+      Object.keys(screens).forEach(function (k) {
+        screens[k].style.transition = '';
+      });
+    }
+    onEnterScreen[name] && onEnterScreen[name]();
+  }
+
+  // ==== 各画面の初期化処理 ====
+  var onEnterScreen = {
+    canvas: function () {
+      drawArtwork(document.getElementById('canvas-main'), state.currentDrops);
+      document.getElementById('canvas-hint').style.display = state.currentDrops.length === 0 ? 'block' : 'none';
+      document.getElementById('btn-complete').disabled = state.currentDrops.length === 0;
+    },
+    interruption: function () {
+      var q = QUESTIONS[Math.floor(Math.random() * QUESTIONS.length)];
+      document.getElementById('question-text').textContent = q;
+    },
+    silence: function () {
+      var el = screens.silence;
+      var glow = document.getElementById('silence-glow');
+      // 前回「暗転」した状態が残っていた場合、暗→明のtransitionが走ってしまわないよう、
+      // 一旦transitionを切って瞬時にリセットしてから、通常のtransition設定に戻す
+      el.style.transition = 'none';
+      el.classList.remove('dim');
+      void el.offsetWidth; // reflow
+      el.style.transition = '';
+      glow.style.opacity = 0;
+
+      function flicker(peak) {
+        glow.style.transition = 'opacity 0.5s ease-out';
+        glow.style.opacity = peak;
+        addTimer(setTimeout(function () {
+          glow.style.transition = 'opacity 0.7s ease-out';
+          glow.style.opacity = 0;
+        }, 500));
+      }
+
+      flicker(0.35);
+      addTimer(setTimeout(function () { el.classList.add('dim'); }, 3000));
+      addTimer(setTimeout(function () { flicker(0.35); }, 10000));
+      addTimer(setTimeout(function () { flicker(0.35); }, 20000));
+      addTimer(setTimeout(function () { flicker(0.4); }, 27000));
+      addTimer(setTimeout(function () { showScreen('colorexit'); }, 30000));
+    },
+    colorexit: function () {
+      var overlay = document.getElementById('colorexit-overlay');
+      var ripple = document.getElementById('colorexit-ripple');
+      var palette = document.getElementById('colorexit-palette');
+      var title = document.getElementById('colorexit-title');
+
+      // 前回の状態を一旦アニメーションなしで「暗転済み」に戻してから、あらためて明転させる
+      overlay.style.transition = 'none';
+      overlay.classList.remove('faded');
+      void overlay.offsetWidth; // reflow
+      ripple.style.transition = 'none';
+      ripple.style.transform = 'scale(0)';
+      ripple.style.opacity = 0.9;
+      title.style.display = 'block';
+      palette.style.display = 'flex';
+      palette.innerHTML = '';
+
+      // ゆっくり明るくなる演出(静寂画面の暗転と対をなす)
+      requestAnimationFrame(function () {
+        overlay.style.transition = 'opacity 4s linear';
+        addTimer(setTimeout(function () { overlay.classList.add('faded'); }, 30));
+      });
+
+      EXIT_COLORS.forEach(function (color) {
+        var btn = document.createElement('button');
+        btn.className = 'color-circle';
+        btn.style.background = color.hex;
+        btn.addEventListener('click', function () { handleColorSelect(color); });
+        palette.appendChild(btn);
+      });
+
+      function handleColorSelect(color) {
+        palette.style.display = 'none';
+        title.style.display = 'none';
+        addDrop(color.key);
+
+        var duration = 900 + Math.random() * 500;
+        ripple.style.background = color.hex;
+        // reflow を挟んでから transition を適用する
+        void ripple.offsetWidth;
+        ripple.style.transition = 'transform ' + duration + 'ms ease-out, opacity ' + duration + 'ms ease-out';
+        ripple.style.transform = 'scale(6)';
+        ripple.style.opacity = 0;
+
+        addTimer(setTimeout(function () { showScreen('sendoff'); }, duration));
+      }
+    },
+    sendoff: function () {
+      addTimer(setTimeout(function () { showScreen('canvas'); }, 1800));
+    },
+    completion: function () {
+      var wrap = document.getElementById('completion-canvas-wrap');
+      var titleEl = document.getElementById('completion-title');
+      var result = pendingCompletionResult;
+      pendingCompletionResult = null;
+      if (!result) { showScreen('canvas'); return; }
+
+      wrap.classList.remove('show');
+      titleEl.classList.remove('show');
+      titleEl.textContent = result.title;
+      drawArtwork(document.getElementById('canvas-completion'), result.drops);
+
+      addTimer(setTimeout(function () { wrap.classList.add('show'); }, 50));
+      addTimer(setTimeout(function () { titleEl.classList.add('show'); }, 950));
+      addTimer(setTimeout(function () { showScreen('canvas'); }, 900 * 2 + 2600));
+    },
+    gallery: function () {
+      var grid = document.getElementById('gallery-grid');
+      grid.innerHTML = '';
+      var items = [{ id: SAMPLE_ARTWORK_ID, drops: SAMPLE_DROPS, title: 'サンプル', sample: true }]
+        .concat(state.gallery.map(function (a) { return { id: a.id, drops: a.drops, title: a.title, sample: false }; }));
+
+      items.forEach(function (item) {
+        var cell = document.createElement('button');
+        cell.className = 'gallery-cell';
+        var canvasEl = document.createElement('canvas');
+        canvasEl.className = 'artwork';
+        cell.appendChild(canvasEl);
+        var label = document.createElement('div');
+        label.className = 'gallery-label';
+        label.textContent = item.title || '';
+        cell.appendChild(label);
+        cell.addEventListener('click', function () {
+          openArtworkView(item);
+        });
+        grid.appendChild(cell);
+        requestAnimationFrame(function () { drawArtwork(canvasEl, item.drops); });
+      });
+    },
+    artworkview: function () {
+      var data = pendingArtworkView;
+      if (!data) { showScreen('gallery'); return; }
+      document.getElementById('artworkview-title').textContent = data.title || '';
+      drawArtwork(document.getElementById('canvas-artworkview'), data.drops);
+      document.getElementById('dialogue-text').textContent = '';
+      document.getElementById('dialogue-text').classList.remove('show');
+      var playBtn = document.getElementById('btn-play-dialogue');
+      var hint = document.getElementById('artworkview-hint');
+      if (data.sample) {
+        playBtn.style.display = 'inline-block';
+        hint.style.display = 'none';
+        playBtn.disabled = false;
+        playBtn.textContent = 'AI対話を再生';
+      } else {
+        playBtn.style.display = 'none';
+        hint.style.display = 'block';
+      }
+    },
+  };
+
+  var pendingCompletionResult = null;
+  var pendingArtworkView = null;
+
+  function openArtworkView(item) {
+    pendingArtworkView = item;
+    showScreen('artworkview');
+  }
+
+  // ==== AI対話再生(元アプリの ArtworkViewScreen.js を移植、expo-speech → Web Speech API) ====
+  var SPEAKER_PAUSE_MS = 350;
+  var speechStopped = true;
+
+  function stopSpeaking() {
+    speechStopped = true;
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+  }
+
+  function playDialogue() {
+    if (!window.speechSynthesis) {
+      alert('お使いのブラウザは音声読み上げに対応していません');
+      return;
+    }
+    speechStopped = false;
+    var playBtn = document.getElementById('btn-play-dialogue');
+    playBtn.disabled = true;
+    playBtn.textContent = '再生中…';
+    speakLine(0);
+  }
+
+  function speakLine(index) {
+    if (speechStopped) return;
+    var textEl = document.getElementById('dialogue-text');
+    var playBtn = document.getElementById('btn-play-dialogue');
+
+    if (index >= SAMPLE_DIALOGUE.length) {
+      speechStopped = true;
+      textEl.classList.remove('show');
+      playBtn.disabled = false;
+      playBtn.textContent = 'AI対話を再生';
+      return;
+    }
+
+    var line = SAMPLE_DIALOGUE[index];
+    var prevSpeaker = index > 0 ? SAMPLE_DIALOGUE[index - 1].speaker : null;
+    var speakerChanged = prevSpeaker !== null && prevSpeaker !== line.speaker;
+
+    textEl.textContent = line.speaker + '：' + line.text;
+    textEl.classList.remove('show');
+    requestAnimationFrame(function () { textEl.classList.add('show'); });
+
+    var utterance = new SpeechSynthesisUtterance(line.text);
+    utterance.lang = 'ja-JP';
+    utterance.onend = function () {
+      if (speechStopped) return;
+      textEl.classList.remove('show');
+      addTimer(setTimeout(function () {
+        speakLine(index + 1);
+      }, 400 + (speakerChanged ? SPEAKER_PAUSE_MS : 0)));
+    };
+    utterance.onerror = function () {
+      if (speechStopped) return;
+      speakLine(index + 1);
+    };
+    window.speechSynthesis.speak(utterance);
+  }
+
+  // ==== イベント登録 ====
+  document.getElementById('btn-start-reset').addEventListener('click', function () { showScreen('interruption'); });
+  document.getElementById('btn-complete').addEventListener('click', function () {
+    var result = completeArtwork();
+    if (result) {
+      pendingCompletionResult = result;
+      showScreen('completion');
+    }
+  });
+  document.getElementById('btn-to-gallery').addEventListener('click', function () { showScreen('gallery'); });
+
+  document.getElementById('btn-interruption-start').addEventListener('click', function () { showScreen('silence'); });
+  document.getElementById('btn-interruption-quit').addEventListener('click', function () { showScreen('canvas'); });
+
+  document.getElementById('btn-silence-skip').addEventListener('click', function () { showScreen('colorexit'); });
+
+  document.getElementById('btn-gallery-back').addEventListener('click', function () { showScreen('canvas'); });
+
+  document.getElementById('btn-play-dialogue').addEventListener('click', playDialogue);
+  document.getElementById('btn-artworkview-back').addEventListener('click', function () { showScreen('gallery'); });
+
+  window.addEventListener('resize', function () {
+    var active = Object.keys(screens).find(function (k) { return screens[k].classList.contains('active'); });
+    if (active === 'canvas') drawArtwork(document.getElementById('canvas-main'), state.currentDrops);
+  });
+
+  // ==== 起動 ====
+  showScreen('canvas');
+})();
+</script>
+</body>
+</html>

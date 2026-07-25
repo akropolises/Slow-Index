@@ -11,28 +11,41 @@
       <header class="topbar">
         <div>
           <p class="eyebrow">Micro Slow</p>
-          <h1>次の予定の前に、短く整える。</h1>
         </div>
       </header>
 
       <main>
         <section class="panel onboarding hidden" id="onboardingView" aria-labelledby="onboardingTitle">
-          <p class="eyebrow">初回設定</p>
-          <h2 id="onboardingTitle">Google Calendarと連携しますか。</h2>
-          <p>予定を読み取り、現在予定がなく、もうすぐ次の予定が始まるときだけMicro Slowを提案します。</p>
+          <p class="eyebrow">次の予定の前に、短く整える</p>
+          <h2 id="onboardingTitle">Google Calendarと連携しますか</h2>
+          <p>予定を読み取り、現在予定がなく、もうすぐ次の予定が始まるときだけMicro Slowを提案します</p>
           <div class="onboarding-actions">
             <button class="primary-button" id="onboardingGoogleButton" type="button">Google Calendarと連携</button>
           </div>
-          <p class="setup-note hidden" id="onboardingStatus">config.js に Google OAuth Client ID を設定してください。</p>
+          <button class="quiet-button" id="onboardingManualButton" type="button">手入力で始める</button>
+          <p class="setup-note hidden" id="onboardingStatus">config.js に Google OAuth Client ID を設定してください</p>
         </section>
 
         <section class="panel hidden" id="homeView" aria-labelledby="homeTitle">
           <div class="section-head">
-            <div>
-              <h2 id="homeTitle">今日のカレンダー</h2>
+            <button class="icon-button icon-button-left" id="galleryButton" type="button" aria-label="今までの記録を見る">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <rect x="3" y="5" width="18" height="16" rx="3" />
+                <path d="M3 10h18" />
+                <path d="M8 3v4" />
+                <path d="M16 3v4" />
+              </svg>
+            </button>
+            <div class="section-head-text">
+              <h2 id="homeTitle">今日の予定</h2>
               <p id="todayMeta">予定を読み込んでいます。</p>
             </div>
-            <button class="secondary-button" id="reloadButton" type="button">更新</button>
+            <button class="icon-button" id="reloadButton" type="button" aria-label="更新">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <path d="M3 12a9 9 0 1 0 3-6.7" />
+                <polyline points="3 3 3 8 8 8" />
+              </svg>
+            </button>
           </div>
 
           <div class="calendar-toggle" role="group" aria-label="カレンダー">
@@ -48,18 +61,18 @@
           <form class="manual-form hidden" id="manualForm">
             <label>
               予定名
-              <input id="eventTitleInput" type="text" value="企画会議">
+              <input id="eventTitleInput" type="text" placeholder="企画会議">
             </label>
             <label>
               開始時刻
-              <input id="eventTimeInput" type="time" value="14:00">
+              <input id="eventTimeInput" type="time" required>
             </label>
             <label>
               長さ
               <select id="eventDurationInput">
                 <option value="5">5分</option>
                 <option value="15">15分</option>
-                <option value="30">30分</option>
+                <option value="30" selected>30分</option>
                 <option value="45">45分</option>
                 <option value="60">60分</option>
               </select>
@@ -76,20 +89,19 @@
               <div class="breath-circle"></div>
               <div class="progress-ring" id="progressRing"></div>
             </div>
-            <p class="eyebrow" id="slowDuration">最大 60秒</p>
-            <h2 id="slowTitle">周囲の音を聞く</h2>
-            <p class="slow-instruction" id="slowInstruction">画面から目を離し、近くの音と遠くの音をひとつずつ聞く。</p>
+            <div class="slow-text" id="slowText">
+              <p class="eyebrow" id="slowDuration">60秒</p>
+              <h2 id="slowTitle">周囲の音を聞く</h2>
+              <p class="slow-instruction" id="slowInstruction">画面から目を離し、近くの音と遠くの音をひとつずつ聞く。</p>
+            </div>
           </div>
           <div class="slow-actions">
-            <button class="primary-button" id="finishSlowButton" type="button">終える</button>
+            <button class="quiet-button" id="finishSlowButton" type="button">ここまでにする</button>
           </div>
         </section>
 
         <section class="panel hidden" id="transitionView" aria-labelledby="transitionTitle">
-          <p class="eyebrow">Micro Slow 完了</p>
-          <h2 id="transitionTitle">次の予定へ戻れます。</h2>
-          <p id="transitionText">少し余白があります。</p>
-          <p class="sense-prompt">今の感じに近い色があれば、ひとつだけ選べます。</p>
+          <p class="sense-prompt" id="transitionTitle">今の気分に近い色を選んでください</p>
           <div class="sense-row" aria-label="今の感覚に近い色">
             <button class="sense-button sense-green" data-sense="green" type="button" aria-label="静かな緑"></button>
             <button class="sense-button sense-gold" data-sense="gold" type="button" aria-label="あたたかい金色"></button>

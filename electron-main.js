@@ -78,26 +78,52 @@ function showMainWindow() {
   }, 3000);
 }
 
+// ウィンドウの不透明度をなめらかに変化させる(OSレベルの表示/非表示が唐突に切り替わらないようにする)
+function animateWindowOpacity(from, to, durationMs, onDone) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const steps = Math.max(Math.round(durationMs / 16), 1);
+  let step = 0;
+  mainWindow.setOpacity(from);
+  const timer = setInterval(() => {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      clearInterval(timer);
+      return;
+    }
+    step += 1;
+    const ratio = Math.min(step / steps, 1);
+    mainWindow.setOpacity(from + (to - from) * ratio);
+    if (ratio >= 1) {
+      clearInterval(timer);
+      onDone?.();
+    }
+  }, 16);
+}
+
 function enterSlowMode() {
   if (!mainWindow) return;
 
   if (mainWindow.isMinimized()) {
     mainWindow.restore();
   }
+  mainWindow.setOpacity(0);
   mainWindow.show();
   mainWindow.setFullScreen(true);
   mainWindow.setAlwaysOnTop(true, "screen-saver");
   mainWindow.focus();
+  animateWindowOpacity(0, 1, 500);
 }
 
 function leaveSlowMode() {
   if (!mainWindow) return;
 
-  mainWindow.setAlwaysOnTop(false);
-  if (mainWindow.isFullScreen()) {
-    mainWindow.setFullScreen(false);
-  }
-  mainWindow.minimize();
+  animateWindowOpacity(1, 0, 400, () => {
+    mainWindow.setAlwaysOnTop(false);
+    if (mainWindow.isFullScreen()) {
+      mainWindow.setFullScreen(false);
+    }
+    mainWindow.minimize();
+    mainWindow.setOpacity(1);
+  });
 }
 
 function clearReminderTimers() {

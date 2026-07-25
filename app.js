@@ -571,9 +571,57 @@ function buildProposalForEvent(event, index) {
   };
 }
 
-function showView(name) {
-  Object.values(views).forEach((view) => view.classList.add("hidden"));
-  views[name].classList.remove("hidden");
+const VIEW_FADE_MS = 320;
+const mainEl = document.querySelector("main");
+
+// 番組の切り替えもフェードで行う(ページめくりのような明確な切り替えを避け、穏やかに切り替わる)
+// fadeMsを指定すると、その画面だけフェードをゆっくりにできる(Slow画面への突入を穏やかにするため)
+function showView(name, { fadeMs } = {}) {
+  const duration = fadeMs || VIEW_FADE_MS;
+  const current = state.view ? views[state.view] : null;
+  const next = views[name];
+
+  if (current && current !== next) {
+    // 画面ごとに高さが違うと、切り替え時に背景の四角がカクッと伸縮して見えるため、
+    // 遷移中はmainの高さを一旦固定し、次の画面の高さへ滑らかにアニメーションさせる
+    mainEl.style.minHeight = `${mainEl.getBoundingClientRect().height}px`;
+
+    current.style.transitionDuration = `${duration}ms`;
+    current.classList.add("fade-out");
+    window.setTimeout(() => {
+      current.classList.add("hidden");
+      current.classList.remove("fade-out");
+      current.style.transitionDuration = "";
+    }, duration);
+  }
+
+  Object.values(views).forEach((view) => {
+    if (view !== current) {
+      view.classList.add("hidden");
+    }
+  });
+
+  next.style.transitionDuration = `${duration}ms`;
+  next.classList.remove("hidden");
+  next.classList.add("fade-out");
+  void next.offsetWidth;
+  requestAnimationFrame(() => {
+    next.classList.remove("fade-out");
+    if (current && current !== next) {
+      const targetHeight = next.scrollHeight;
+      requestAnimationFrame(() => {
+        mainEl.style.minHeight = `${targetHeight}px`;
+      });
+      window.setTimeout(() => {
+        mainEl.style.minHeight = "";
+        next.style.transitionDuration = "";
+      }, duration);
+    } else {
+      window.setTimeout(() => {
+        next.style.transitionDuration = "";
+      }, duration);
+    }
+  });
   state.view = name;
 }
 
@@ -611,8 +659,12 @@ function renderHome() {
   const activePrompt = getActivePrompt();
   const availableCount = proposals.filter((proposal) => proposal.hasSpace && !state.dismissed.has(proposal.id)).length;
   todayMeta.textContent = activePrompt
-    ? `${activePrompt.event.title} がもうすぐ始まります。`
-    : `${state.events.length}件の予定。${availableCount}件は直前にMicro Slowを置けます。`;
+    ? `${activePrompt.event.title} がもうすぐ始まります`
+    : state.events.length === 0
+      ? "今日の予定はまだありません"
+      : availableCount > 0
+        ? `${availableCount}件は、5分前にそっとMicro Slowが届きます`
+        : "Micro Slowが届く予定はありません";
   calendarDay.innerHTML = "";
 
   if (activePrompt) {
@@ -632,7 +684,7 @@ function renderHome() {
   if (state.events.length === 0) {
     const empty = document.createElement("div");
     empty.className = "empty-state";
-    empty.innerHTML = "<p>今日の予定はまだありません。</p>";
+    empty.innerHTML = "<p>今日の予定はまだありません</p>";
     calendarDay.append(empty);
     return;
   }
@@ -640,7 +692,7 @@ function renderHome() {
   proposals.forEach((proposal) => {
     const eventEnd = timeFromMinutes(minutesFromTime(proposal.event.start) + Number(proposal.event.duration));
     const isDismissed = state.dismissed.has(proposal.id);
-    const autoLabel = proposal.hasSpace ? (isDismissed ? "スキップ" : "自動開始") : "余白少";
+    const autoLabel = proposal.hasSpace ? (isDismissed ? "見送る" : "届く") : "余白少";
     const item = document.createElement("article");
     item.className = `calendar-event${isDismissed ? " dismissed" : ""}`;
     item.innerHTML = `
@@ -650,14 +702,12 @@ function renderHome() {
       </div>
       <button class="event-card" data-action="start" data-id="${proposal.id}" type="button">
         <span class="event-title">${proposal.event.title}</span>
-        <span class="event-subtext">${proposal.slowStart} から ${Math.min(proposal.slow.seconds, maxSlowDuration)}秒</span>
+        <span class="event-subtext">Micro Slow ${proposal.slowStart}〜（${Math.min(proposal.slow.seconds, maxSlowDuration)}秒）</span>
       </button>
-      <div class="event-side">
-        <button class="event-badge${proposal.hasSpace ? "" : " disabled"}" data-action="toggle-auto" data-id="${proposal.id}" type="button" ${
+      <button class="event-badge${proposal.hasSpace ? "" : " disabled"}" data-action="toggle-auto" data-id="${proposal.id}" type="button" ${
       proposal.hasSpace ? "" : "disabled"
     }>${autoLabel}</button>
-        <button class="dismiss-event" data-action="delete" data-id="${proposal.event.id}" type="button" aria-label="${proposal.event.title}を削除">×</button>
-      </div>
+      <button class="dismiss-event" data-action="delete" data-id="${proposal.event.id}" type="button" aria-label="${proposal.event.title}を削除">×</button>
     `;
     calendarDay.append(item);
   });
@@ -677,8 +727,16 @@ function startSlow(proposalId, options = {}) {
   };
   document.querySelector("#slowTitle").textContent = state.currentSlow.title;
   document.querySelector("#slowInstruction").textContent = state.currentSlow.instruction;
-  document.querySelector("#slowDuration").textContent = `最大 ${state.currentSlow.seconds}秒`;
-  showView("slow");
+  document.querySelector("#slowDuration").textContent = `${state.currentSlow.seconds}秒`;
+
+  // 呼吸円だけを先に見せ、テキストは少し遅れてふわっと出す(自動起動時も含め、突然全部が現れる驚きを和らげる)
+  const slowText = document.querySelector("#slowText");
+  slowText.classList.remove("visible");
+  showView("slow", { fadeMs: 700 });
+  window.setTimeout(() => {
+    slowText.classList.add("visible");
+  }, 500);
+
   desktop?.enterSlowMode?.();
   rememberSlow(state.currentSlow.id);
   runProgress();
@@ -946,7 +1004,6 @@ async function loadGoogleEvents() {
 
 document.querySelector("#calendarDay").addEventListener("click", handleProposalAction);
 document.querySelector("#finishSlowButton").addEventListener("click", finishSlow);
-document.querySelector("#completeButton").addEventListener("click", completeTransition);
 document.querySelector("#reloadButton").addEventListener("click", reloadCurrentSource);
 document.querySelector("#googleConnectButton").addEventListener("click", loadGoogleEvents);
 document.querySelector("#onboardingGoogleButton").addEventListener("click", loadGoogleEvents);
@@ -991,15 +1048,36 @@ document.querySelectorAll(".toggle-button").forEach((button) => {
 
 document.querySelectorAll(".sense-button").forEach((button) => {
   button.addEventListener("click", () => {
-    document.querySelectorAll(".sense-button").forEach((item) => item.classList.remove("selected"));
-    button.classList.add("selected");
+    if (state.senseSelected) return;
+    state.senseSelected = true;
+    const colorKey = button.dataset.sense;
+    addArtworkDrop(colorKey);
+
+    // 畑中アプリのColorExitScreenを踏襲:選んだ色はボタンの位置ではなく画面中央から円状に広がって消える。
+    // 選択と同時にパレットを隠し、波紋だけの画面にする
+    views.transition.classList.add("is-selecting");
+
+    const senseRow = document.querySelector(".sense-row");
+    const ripple = document.createElement("span");
+    ripple.className = "sense-ripple";
+    ripple.style.background = senseColorHex[colorKey] || "#999999";
+    const duration = 900 + Math.random() * 500;
+    ripple.style.transitionDuration = `${duration}ms`;
+    senseRow.append(ripple);
+    void ripple.offsetWidth;
+    requestAnimationFrame(() => ripple.classList.add("spread"));
+
     window.setTimeout(() => {
-      completeTransition();
-    }, 450);
+      showSendoff();
+    }, duration);
   });
 });
 
 document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeGalleryDay();
+    return;
+  }
   if (event.key !== "Enter") {
     return;
   }

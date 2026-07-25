@@ -12,6 +12,7 @@ module.exports = {
       "^/scripts($|/)",
       "^/out($|/)",
       "^/\\.git($|/)",
+      "^/SlowTechApp($|/)",
     ],
   },
   hooks: {

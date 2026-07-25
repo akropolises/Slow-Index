@@ -51,6 +51,221 @@ button {
   gap: 16px;
 }
 
+.section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  position: relative;
+  gap: 16px;
+}
+
+.section-head-text {
+  text-align: center;
+  width: 100%;
+}
+
+.icon-button {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  min-height: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+}
+
+.icon-button-left {
+  left: 0;
+  right: auto;
+}
+
+.icon-button-static {
+  position: static;
+  width: 44px;
+  height: 44px;
+}
+
+.icon-button.is-playing {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.icon-button.is-playing:hover {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+  color: #fff;
+}
+
+.icon-button:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.icon-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.icon-button:disabled:hover {
+  border-color: var(--line);
+  color: var(--muted);
+}
+
+/* 月間カレンダー(ギャラリー)画面 */
+.gallery-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.gallery-head .icon-button {
+  position: static;
+}
+
+.gallery-head h2 {
+  margin: 0;
+  min-width: 8em;
+  text-align: center;
+}
+
+.gallery-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.gallery-day {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.gallery-day.empty {
+  visibility: hidden;
+}
+
+.gallery-day.is-today {
+  border-color: var(--accent);
+  transform: scale(1.12);
+  z-index: 2;
+  animation: gallery-breathe 4s ease-in-out infinite;
+}
+
+@keyframes gallery-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(46, 111, 101, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(46, 111, 101, 0);
+  }
+}
+
+.gallery-day-number {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  font-size: 0.7rem;
+  color: var(--muted);
+  z-index: 1;
+}
+
+.gallery-day canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.gallery-day.has-drops {
+  cursor: pointer;
+}
+
+.gallery-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(32, 33, 31, 0.55);
+  z-index: 100;
+  padding: 24px;
+}
+
+.gallery-overlay-panel {
+  position: relative;
+  background: var(--panel);
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: min(90vw, 340px);
+}
+
+.gallery-overlay-panel .icon-button {
+  top: 12px;
+  right: 12px;
+}
+
+.gallery-overlay-panel canvas {
+  width: min(70vw, 280px);
+  aspect-ratio: 1;
+  background: #fffdf8;
+  border-radius: 16px;
+}
+
+.gallery-overlay-panel p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.dialogue-area {
+  height: 100px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+}
+
+.dialogue-line {
+  color: var(--text);
+  font-size: 0.88rem;
+  line-height: 1.6;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 400ms ease;
+}
+
+.dialogue-line.visible {
+  opacity: 1;
+}
+
 .slow-actions {
   display: flex;
   align-items: center;
@@ -412,8 +627,50 @@ select {
   box-shadow: 0 0 0 3px rgba(32, 33, 31, 0.12);
 }
 
+/* 畑中アプリのColorExitScreenを踏襲:選んだ色が円状に広がって消えるリップル演出 */
+.sense-ripple {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 60px;
+  height: 60px;
+  margin-top: -30px;
+  margin-left: -30px;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: scale(0);
+  opacity: 0.9;
+  transition: transform 1.1s ease-out, opacity 1.1s ease-out;
+}
+
+.sense-ripple.spread {
+  transform: scale(6);
+  opacity: 0;
+}
+
+/* 色を選んだ後は、畑中アプリのColorExitScreenのようにパレットと案内文を消し、波紋だけが広がる画面にする */
+#transitionView.is-selecting .sense-prompt,
+#transitionView.is-selecting .sense-button,
+#transitionView.is-selecting .quiet-button {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+
+#slowView,
+#transitionView,
+#sendoffView {
+  text-align: center;
+  min-height: 56vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
 .transition-actions {
   display: flex;
+  justify-content: center;
   gap: 10px;
   margin-top: 18px;
 }

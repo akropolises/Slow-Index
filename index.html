@@ -96,10 +96,55 @@
             <button class="sense-button sense-blue" data-sense="blue" type="button" aria-label="澄んだ青"></button>
             <button class="sense-button sense-rose" data-sense="rose" type="button" aria-label="やわらかい赤"></button>
           </div>
+        </section>
+
+        <section class="panel hidden" id="sendoffView" aria-labelledby="sendoffTitle">
+          <h2 id="sendoffTitle">いってらっしゃい</h2>
+        </section>
+
+        <section class="panel hidden" id="galleryView" aria-labelledby="galleryTitle">
+          <div class="gallery-head">
+            <button class="icon-button" id="galleryPrevButton" type="button" aria-label="前の月">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+            </button>
+            <h2 id="galleryTitle">2026年7月</h2>
+            <button class="icon-button" id="galleryNextButton" type="button" aria-label="次の月">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
+          </div>
+          <div class="gallery-weekdays">
+            <span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span>
+          </div>
+          <div class="gallery-grid" id="galleryGrid"></div>
           <div class="transition-actions">
-            <button class="primary-button" id="completeButton" type="button">終える</button>
+            <button class="quiet-button" id="galleryBackButton" type="button">今日の予定に戻る</button>
           </div>
         </section>
+
+        <div class="gallery-overlay hidden" id="galleryDayOverlay">
+          <div class="gallery-overlay-panel">
+            <button class="icon-button" id="galleryDayCloseButton" type="button" aria-label="閉じる">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <line x1="6" y1="6" x2="18" y2="18" />
+                <line x1="18" y1="6" x2="6" y2="18" />
+              </svg>
+            </button>
+            <p id="galleryDayLabel"></p>
+            <canvas id="galleryDayCanvas" width="280" height="280"></canvas>
+            <div class="dialogue-area">
+              <p class="dialogue-line" id="dialogueLine"></p>
+            </div>
+            <button class="icon-button icon-button-static" id="dialoguePlayButton" type="button" aria-label="AI対話を再生">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true" focusable="false">
+                <path d="M8 5v14l11-7z" id="dialoguePlayIcon" />
+              </svg>
+            </button>
+          </div>
+        </div>
 
       </main>
     </div>

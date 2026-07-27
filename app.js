@@ -663,8 +663,8 @@ function renderHome() {
     : state.events.length === 0
       ? "今日の予定はまだありません"
       : availableCount > 0
-        ? `${availableCount}件は、5分前にそっとMicro Slowが届きます`
-        : "Micro Slowが届く予定はありません";
+        ? `${availableCount}件は、5分前にゆっくりフレッシュします`
+        : "ゆっくりフレッシュする予定はありません";
   calendarDay.innerHTML = "";
 
   if (activePrompt) {
@@ -672,7 +672,7 @@ function renderHome() {
     prompt.className = "active-prompt";
     prompt.innerHTML = `
       <div>
-        <p class="eyebrow">Micro Slow 提案</p>
+        <p class="eyebrow">ゆっくりフレッシュ 提案</p>
         <h3>${activePrompt.event.start} ${activePrompt.event.title}</h3>
         <p>${Math.min(activePrompt.slow.seconds, maxSlowDuration)}秒だけ整える。</p>
       </div>
@@ -702,7 +702,7 @@ function renderHome() {
       </div>
       <button class="event-card" data-action="start" data-id="${proposal.id}" type="button">
         <span class="event-title">${proposal.event.title}</span>
-        <span class="event-subtext">Micro Slow ${proposal.slowStart}〜（${Math.min(proposal.slow.seconds, maxSlowDuration)}秒）</span>
+        <span class="event-subtext">ゆっくりフレッシュ ${proposal.slowStart}〜（${Math.min(proposal.slow.seconds, maxSlowDuration)}秒）</span>
       </button>
       <button class="event-badge${proposal.hasSpace ? "" : " disabled"}" data-action="toggle-auto" data-id="${proposal.id}" type="button" ${
       proposal.hasSpace ? "" : "disabled"

@@ -3,8 +3,8 @@ const path = require("path");
 
 module.exports = {
   packagerConfig: {
-    name: "Micro Slow",
-    executableName: "Micro Slow",
+    name: "ゆっくりフレッシュ",
+    executableName: "ゆっくりフレッシュ",
     icon: "assets/app-icon.ico",
     ignore: [
       "^/config\\.local\\.js$",

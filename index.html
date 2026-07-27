@@ -11,28 +11,41 @@
       <header class="topbar">
         <div>
           <p class="eyebrow">Micro Slow</p>
-          <h1>次の予定の前に、短く整える。</h1>
         </div>
       </header>
 
       <main>
         <section class="panel onboarding hidden" id="onboardingView" aria-labelledby="onboardingTitle">
-          <p class="eyebrow">初回設定</p>
-          <h2 id="onboardingTitle">Google Calendarと連携しますか。</h2>
-          <p>予定を読み取り、現在予定がなく、もうすぐ次の予定が始まるときだけMicro Slowを提案します。</p>
+          <p class="eyebrow">次の予定の前に、短く整える</p>
+          <h2 id="onboardingTitle">Google Calendarと連携しますか</h2>
+          <p>予定を読み取り、現在予定がなく、もうすぐ次の予定が始まるときだけMicro Slowを提案します</p>
           <div class="onboarding-actions">
             <button class="primary-button" id="onboardingGoogleButton" type="button">Google Calendarと連携</button>
           </div>
-          <p class="setup-note hidden" id="onboardingStatus">config.js に Google OAuth Client ID を設定してください。</p>
+          <button class="quiet-button" id="onboardingManualButton" type="button">手入力で始める</button>
+          <p class="setup-note hidden" id="onboardingStatus">config.js に Google OAuth Client ID を設定してください</p>
         </section>
 
         <section class="panel hidden" id="homeView" aria-labelledby="homeTitle">
           <div class="section-head">
-            <div>
-              <h2 id="homeTitle">今日のカレンダー</h2>
+            <button class="icon-button icon-button-left" id="galleryButton" type="button" aria-label="今までの記録を見る">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <rect x="3" y="5" width="18" height="16" rx="3" />
+                <path d="M3 10h18" />
+                <path d="M8 3v4" />
+                <path d="M16 3v4" />
+              </svg>
+            </button>
+            <div class="section-head-text">
+              <h2 id="homeTitle">今日の予定</h2>
               <p id="todayMeta">予定を読み込んでいます。</p>
             </div>
-            <button class="secondary-button" id="reloadButton" type="button">更新</button>
+            <button class="icon-button" id="reloadButton" type="button" aria-label="更新">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <path d="M3 12a9 9 0 1 0 3-6.7" />
+                <polyline points="3 3 3 8 8 8" />
+              </svg>
+            </button>
           </div>
 
           <div class="calendar-toggle" role="group" aria-label="カレンダー">
@@ -48,18 +61,18 @@
           <form class="manual-form hidden" id="manualForm">
             <label>
               予定名
-              <input id="eventTitleInput" type="text" value="企画会議">
+              <input id="eventTitleInput" type="text" placeholder="企画会議">
             </label>
             <label>
               開始時刻
-              <input id="eventTimeInput" type="time" value="14:00">
+              <input id="eventTimeInput" type="time" required>
             </label>
             <label>
               長さ
               <select id="eventDurationInput">
                 <option value="5">5分</option>
                 <option value="15">15分</option>
-                <option value="30">30分</option>
+                <option value="30" selected>30分</option>
                 <option value="45">45分</option>
                 <option value="60">60分</option>
               </select>
@@ -76,30 +89,74 @@
               <div class="breath-circle"></div>
               <div class="progress-ring" id="progressRing"></div>
             </div>
-            <p class="eyebrow" id="slowDuration">最大 60秒</p>
-            <h2 id="slowTitle">周囲の音を聞く</h2>
-            <p class="slow-instruction" id="slowInstruction">画面から目を離し、近くの音と遠くの音をひとつずつ聞く。</p>
+            <div class="slow-text" id="slowText">
+              <p class="eyebrow" id="slowDuration">60秒</p>
+              <h2 id="slowTitle">周囲の音を聞く</h2>
+              <p class="slow-instruction" id="slowInstruction">画面から目を離し、近くの音と遠くの音をひとつずつ聞く。</p>
+            </div>
           </div>
           <div class="slow-actions">
-            <button class="primary-button" id="finishSlowButton" type="button">終える</button>
+            <button class="quiet-button" id="finishSlowButton" type="button">ここまでにする</button>
           </div>
         </section>
 
         <section class="panel hidden" id="transitionView" aria-labelledby="transitionTitle">
-          <p class="eyebrow">Micro Slow 完了</p>
-          <h2 id="transitionTitle">次の予定へ戻れます。</h2>
-          <p id="transitionText">少し余白があります。</p>
-          <p class="sense-prompt">今の感じに近い色があれば、ひとつだけ選べます。</p>
+          <p class="sense-prompt" id="transitionTitle">今の気分に近い色を選んでください</p>
           <div class="sense-row" aria-label="今の感覚に近い色">
             <button class="sense-button sense-green" data-sense="green" type="button" aria-label="静かな緑"></button>
             <button class="sense-button sense-gold" data-sense="gold" type="button" aria-label="あたたかい金色"></button>
             <button class="sense-button sense-blue" data-sense="blue" type="button" aria-label="澄んだ青"></button>
             <button class="sense-button sense-rose" data-sense="rose" type="button" aria-label="やわらかい赤"></button>
           </div>
+        </section>
+
+        <section class="panel hidden" id="sendoffView" aria-labelledby="sendoffTitle">
+          <h2 id="sendoffTitle">いってらっしゃい</h2>
+        </section>
+
+        <section class="panel hidden" id="galleryView" aria-labelledby="galleryTitle">
+          <div class="gallery-head">
+            <button class="icon-button" id="galleryPrevButton" type="button" aria-label="前の月">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+            </button>
+            <h2 id="galleryTitle">2026年7月</h2>
+            <button class="icon-button" id="galleryNextButton" type="button" aria-label="次の月">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
+          </div>
+          <div class="gallery-weekdays">
+            <span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span>
+          </div>
+          <div class="gallery-grid" id="galleryGrid"></div>
           <div class="transition-actions">
-            <button class="primary-button" id="completeButton" type="button">終える</button>
+            <button class="quiet-button" id="galleryBackButton" type="button">今日の予定に戻る</button>
           </div>
         </section>
+
+        <div class="gallery-overlay hidden" id="galleryDayOverlay">
+          <div class="gallery-overlay-panel">
+            <button class="icon-button" id="galleryDayCloseButton" type="button" aria-label="閉じる">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <line x1="6" y1="6" x2="18" y2="18" />
+                <line x1="18" y1="6" x2="6" y2="18" />
+              </svg>
+            </button>
+            <p id="galleryDayLabel"></p>
+            <canvas id="galleryDayCanvas" width="280" height="280"></canvas>
+            <div class="dialogue-area">
+              <p class="dialogue-line" id="dialogueLine"></p>
+            </div>
+            <button class="icon-button icon-button-static" id="dialoguePlayButton" type="button" aria-label="AI対話を再生">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true" focusable="false">
+                <path d="M8 5v14l11-7z" id="dialoguePlayIcon" />
+              </svg>
+            </button>
+          </div>
+        </div>
 
       </main>
     </div>

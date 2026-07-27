@@ -244,6 +244,19 @@ button {
   font-size: 0.85rem;
 }
 
+.gallery-day-empty-note {
+  width: min(70vw, 280px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  border-radius: 16px;
+  background: #fffdf8;
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
 .dialogue-area {
   height: 100px;
   overflow: hidden;

@@ -88,6 +88,17 @@ const DEMO_HISTORY = {
     { color: "gold", x: 0.5871776473411436, y: 0.591271312753027, size: 48.36675857913927 },
     { color: "gold", x: 0.35668366809903845, y: 0.3823651896593779, size: 63.08323735028455 },
   ],
+  "2026-07-26": [
+    { color: "blue", x: 0.42107396443298573, y: 0.28934876124587293, size: 71.36104882819374 },
+    { color: "rose", x: 0.6524188305992471, y: 0.7183952647160382, size: 58.98213467109228 },
+    { color: "blue", x: 0.19883745091827632, y: 0.6021957384756349, size: 66.7481965390483 },
+    { color: "gold", x: 0.7746215938271601, y: 0.4392586713408965, size: 48.216543028810845 },
+  ],
+  "2026-07-27": [
+    { color: "green", x: 0.5536784192837465, y: 0.34718293651498027, size: 79.28471953648102 },
+    { color: "green", x: 0.31904582716374536, y: 0.5824619837451602, size: 54.62918374651937 },
+    { color: "rose", x: 0.7218395164837291, y: 0.6584716239481027, size: 67.19384752618304 },
+  ],
 };
 
 // 出口で選べる感覚色と、キャンバスの滲み描画に使う実際のRGB値の対応表
@@ -300,13 +311,26 @@ function dropsForDateKey(key) {
 }
 
 // 月間カレンダー風のギャラリー。各日のセルに、その日のキャンバスをそのまま小さく描画する
+// ギャラリーで表示・月送りできるのは2026年1月〜12月のみ
+const GALLERY_MIN_MONTH_KEY = "2026-01";
+const GALLERY_MAX_MONTH_KEY = "2026-12";
+
+function galleryMonthKey(year, month) {
+  return `${year}-${(month + 1).toString().padStart(2, "0")}`;
+}
+
 function renderGallery() {
   const galleryTitle = document.querySelector("#galleryTitle");
   const galleryGrid = document.querySelector("#galleryGrid");
+  const galleryPrevButton = document.querySelector("#galleryPrevButton");
+  const galleryNextButton = document.querySelector("#galleryNextButton");
   const { galleryYear, galleryMonth } = state;
+  const monthKey = galleryMonthKey(galleryYear, galleryMonth);
 
   galleryTitle.textContent = `${galleryYear}年${galleryMonth + 1}月`;
   galleryGrid.innerHTML = "";
+  galleryPrevButton.disabled = monthKey <= GALLERY_MIN_MONTH_KEY;
+  galleryNextButton.disabled = monthKey >= GALLERY_MAX_MONTH_KEY;
 
   const firstWeekday = new Date(galleryYear, galleryMonth, 1).getDay();
   const daysInMonth = new Date(galleryYear, galleryMonth + 1, 0).getDate();
@@ -321,21 +345,28 @@ function renderGallery() {
   for (let day = 1; day <= daysInMonth; day += 1) {
     const key = dateKeyFor(galleryYear, galleryMonth, day);
     const drops = dropsForDateKey(key);
+    const isToday = key === todayKey;
+    const isPastOrToday = key <= todayKey;
     const cell = document.createElement("div");
-    cell.className = `gallery-day${key === todayKey ? " is-today" : ""}`;
+    cell.className = `gallery-day${isToday ? " is-today" : ""}`;
 
     const number = document.createElement("span");
     number.className = "gallery-day-number";
     number.textContent = day;
     cell.append(number);
 
-    if (drops.length > 0) {
+    // 今日まで(未来は除く)は、記録が0件でも開けるようにする
+    if (drops.length > 0 || isPastOrToday) {
       cell.classList.add("has-drops");
       cell.dataset.dateKey = key;
-      const canvas = document.createElement("canvas");
-      cell.append(canvas);
-      galleryGrid.append(cell);
-      requestAnimationFrame(() => renderDropsOnCanvas(canvas, drops));
+      if (drops.length > 0) {
+        const canvas = document.createElement("canvas");
+        cell.append(canvas);
+        galleryGrid.append(cell);
+        requestAnimationFrame(() => renderDropsOnCanvas(canvas, drops));
+      } else {
+        galleryGrid.append(cell);
+      }
     } else {
       galleryGrid.append(cell);
     }
@@ -344,12 +375,20 @@ function renderGallery() {
 
 function openGalleryDay(key) {
   const drops = dropsForDateKey(key);
-  if (drops.length === 0) return;
   const [year, month, day] = key.split("-").map(Number);
   document.querySelector("#galleryDayLabel").textContent = `${year}年${month}月${day}日`;
   document.querySelector("#galleryDayOverlay").classList.remove("hidden");
   const canvas = document.querySelector("#galleryDayCanvas");
-  requestAnimationFrame(() => renderDropsOnCanvas(canvas, drops));
+  const emptyNote = document.querySelector("#galleryDayEmptyNote");
+  if (drops.length > 0) {
+    canvas.classList.remove("hidden");
+    emptyNote.classList.add("hidden");
+    requestAnimationFrame(() => renderDropsOnCanvas(canvas, drops));
+  } else {
+    canvas.classList.add("hidden");
+    emptyNote.classList.remove("hidden");
+    emptyNote.textContent = key === todayDateKey() ? "まだ何も描かれていません" : "この日の記録はありません";
+  }
 
   // AI対話は、その構図を見て書いた日付にしか用意していないため、それ以外の日はボタンをグレーアウトする
   const playButton = document.querySelector("#dialoguePlayButton");
@@ -465,6 +504,9 @@ function resetDialogue() {
 }
 
 function changeGalleryMonth(delta) {
+  const monthKey = galleryMonthKey(state.galleryYear, state.galleryMonth);
+  if (delta < 0 && monthKey <= GALLERY_MIN_MONTH_KEY) return;
+  if (delta > 0 && monthKey >= GALLERY_MAX_MONTH_KEY) return;
   const next = new Date(state.galleryYear, state.galleryMonth + delta, 1);
   state.galleryYear = next.getFullYear();
   state.galleryMonth = next.getMonth();

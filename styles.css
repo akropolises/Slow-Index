@@ -257,7 +257,7 @@ button {
   text-align: center;
 }
 
-.dialogue-area {
+/* .dialogue-area {
   height: 100px;
   overflow: hidden;
   display: flex;
@@ -277,7 +277,7 @@ button {
 
 .dialogue-line.visible {
   opacity: 1;
-}
+} */
 
 .slow-actions {
   display: flex;
@@ -741,8 +741,8 @@ select {
 }
 
 #slowView,
-#transitionView,
-#sendoffView {
+/* #sendoffView, */
+#transitionView {
   text-align: center;
   min-height: 56vh;
   display: flex;

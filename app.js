@@ -12,6 +12,8 @@ const storageKeys = {
 // デモ用に固定で用意したキャンバスの履歴。どのマシンで開いてもカレンダーが同じ見た目になるよう、
 // localStorageに依存せずコードに直接埋め込む(readArtworkStateで既存のhistoryにマージされる)。
 // 2026-07-24と2026-07-25の分はAI対話(DIALOGUES)と対になっているため、値を変えないこと。
+const DEMO_HISTORY = {};
+/*
 const DEMO_HISTORY = {
   "2026-07-14": [
     { color: "blue", x: 0.9208937276144674, y: 0.7597977933918486, size: 88.54445686126468 },
@@ -100,6 +102,7 @@ const DEMO_HISTORY = {
     { color: "rose", x: 0.7218395164837291, y: 0.6584716239481027, size: 67.19384752618304 },
   ],
 };
+*/
 
 // 出口で選べる感覚色と、キャンバスの滲み描画に使う実際のRGB値の対応表
 const senseColorHex = {
@@ -151,7 +154,7 @@ const state = {
   startedAutomatically: new Set(),
   artwork: readArtworkState(),
   senseSelected: false,
-  sendoffTimer: null,
+  // sendoffTimer: null,
   galleryYear: new Date().getFullYear(),
   galleryMonth: new Date().getMonth(),
 };
@@ -164,7 +167,7 @@ const views = {
   home: document.querySelector("#homeView"),
   slow: document.querySelector("#slowView"),
   transition: document.querySelector("#transitionView"),
-  sendoff: document.querySelector("#sendoffView"),
+  // sendoff: document.querySelector("#sendoffView"),
   gallery: document.querySelector("#galleryView"),
 };
 
@@ -229,12 +232,27 @@ function writeArtworkState() {
   localStorage.setItem(storageKeys.artwork, JSON.stringify(state.artwork));
 }
 
+function refreshArtworkDate() {
+  const today = todayDateKey();
+  if (state.artwork.date === today) {
+    return;
+  }
+
+  if (state.artwork.date && state.artwork.todayDrops.length > 0) {
+    state.artwork.history[state.artwork.date] = state.artwork.todayDrops;
+  }
+  state.artwork.date = today;
+  state.artwork.todayDrops = [];
+  writeArtworkState();
+}
+
 function randomJitter(range) {
   return (Math.random() - 0.5) * range;
 }
 
 // 選んだ色を1滴分のデータとして今日のキャンバスに追加する
 function addArtworkDrop(colorKey) {
+  refreshArtworkDate();
   const drop = {
     color: colorKey,
     x: 0.5 + randomJitter(0.5),
@@ -311,9 +329,9 @@ function dropsForDateKey(key) {
 }
 
 // 月間カレンダー風のギャラリー。各日のセルに、その日のキャンバスをそのまま小さく描画する
-// ギャラリーで表示・月送りできるのは2026年1月〜12月のみ
+// ギャラリーで表示・月送りできるのは2026年1月〜現在月のみ
 const GALLERY_MIN_MONTH_KEY = "2026-01";
-const GALLERY_MAX_MONTH_KEY = "2026-12";
+const GALLERY_MAX_MONTH_KEY = galleryMonthKey(new Date().getFullYear(), new Date().getMonth());
 
 function galleryMonthKey(year, month) {
   return `${year}-${(month + 1).toString().padStart(2, "0")}`;
@@ -391,24 +409,25 @@ function openGalleryDay(key) {
   }
 
   // AI対話は、その構図を見て書いた日付にしか用意していないため、それ以外の日はボタンをグレーアウトする
-  const playButton = document.querySelector("#dialoguePlayButton");
-  const script = DIALOGUES[key];
-  dialogueState.script = script || null;
-  playButton.disabled = !script;
-  playButton.setAttribute(
-    "aria-label",
-    script ? "AI対話を再生" : "AI対話はこのキャンバス用にまだ用意されていません"
-  );
+  // const playButton = document.querySelector("#dialoguePlayButton");
+  // const script = DIALOGUES[key];
+  // dialogueState.script = script || null;
+  // playButton.disabled = !script;
+  // playButton.setAttribute(
+  //   "aria-label",
+  //   script ? "AI対話を再生" : "AI対話はこのキャンバス用にまだ用意されていません"
+  // );
 }
 
 function closeGalleryDay() {
-  resetDialogue();
+  // resetDialogue();
   document.querySelector("#galleryDayOverlay").classList.add("hidden");
 }
 
 // デモ用に用意した、AI同士が絵について語り合う対話(畑中アプリのSAMPLE_DIALOGUEを踏襲)。
 // 実際のキャンバスの構図を見て書いているため、日付ごとに台本が異なる(DIALOGUES[日付])。
 // 対応する日付以外では構図が一致しないため、その日を開いたときだけボタンを有効にする。
+/*
 const DIALOGUES = {
   // 静かな緑5滴が、あたたかい金色4滴を包み込むように寄り添う構図
   "2026-07-25": [
@@ -502,6 +521,7 @@ function resetDialogue() {
   dialogueState.index = -1;
   document.querySelector("#dialogueLine").classList.remove("visible");
 }
+*/
 
 function changeGalleryMonth(delta) {
   const monthKey = galleryMonthKey(state.galleryYear, state.galleryMonth);
@@ -769,7 +789,7 @@ function startSlow(proposalId, options = {}) {
   };
   document.querySelector("#slowTitle").textContent = state.currentSlow.title;
   document.querySelector("#slowInstruction").textContent = state.currentSlow.instruction;
-  document.querySelector("#slowDuration").textContent = `${state.currentSlow.seconds}秒`;
+  document.querySelector("#slowDuration").textContent = `最大${state.currentSlow.seconds}秒`;
 
   // 呼吸円だけを先に見せ、テキストは少し遅れてふわっと出す(自動起動時も含め、突然全部が現れる驚きを和らげる)
   const slowText = document.querySelector("#slowText");
@@ -944,15 +964,16 @@ function finishSlow() {
 }
 
 // 畑中アプリのSendOffScreenを踏襲:「いってらっしゃい」のみを見せ、1.8秒後に自動で戻る
-function showSendoff() {
-  window.clearTimeout(state.transitionTimer);
-  showView("sendoff");
-  state.sendoffTimer = window.setTimeout(completeTransition, 1800);
-}
+
+// function showSendoff() {
+//   window.clearTimeout(state.transitionTimer);
+//   showView("sendoff");
+//   state.sendoffTimer = window.setTimeout(completeTransition, 1800);
+// }
 
 function completeTransition() {
   window.clearTimeout(state.transitionTimer);
-  window.clearTimeout(state.sendoffTimer);
+  // window.clearTimeout(state.sendoffTimer);
   showView("home");
   renderHome();
   desktop?.leaveSlowMode?.();
@@ -1070,13 +1091,13 @@ document.querySelector("#galleryGrid").addEventListener("click", (event) => {
   openGalleryDay(cell.dataset.dateKey);
 });
 document.querySelector("#galleryDayCloseButton").addEventListener("click", closeGalleryDay);
-document.querySelector("#dialoguePlayButton").addEventListener("click", () => {
-  if (dialogueState.playing) {
-    pauseDialogue();
-  } else {
-    playDialogue();
-  }
-});
+// document.querySelector("#dialoguePlayButton").addEventListener("click", () => {
+//   if (dialogueState.playing) {
+//     pauseDialogue();
+//   } else {
+//     playDialogue();
+//   }
+// });
 document.querySelector("#galleryDayOverlay").addEventListener("click", (event) => {
   if (event.target.id === "galleryDayOverlay") {
     closeGalleryDay();
@@ -1110,7 +1131,8 @@ document.querySelectorAll(".sense-button").forEach((button) => {
     requestAnimationFrame(() => ripple.classList.add("spread"));
 
     window.setTimeout(() => {
-      showSendoff();
+      // showSendoff();
+      completeTransition();
     }, duration);
   });
 });
@@ -1127,9 +1149,10 @@ document.addEventListener("keydown", (event) => {
   if (state.view === "slow") {
     finishSlow();
   } else if (state.view === "transition") {
-    showSendoff();
-  } else if (state.view === "sendoff") {
+    // showSendoff();
     completeTransition();
+  // } else if (state.view === "sendoff") {
+  //   completeTransition();
   }
 });
 

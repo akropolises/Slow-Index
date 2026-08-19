@@ -121,7 +121,7 @@ function leaveSlowMode() {
     if (mainWindow.isFullScreen()) {
       mainWindow.setFullScreen(false);
     }
-    mainWindow.minimize();
+    mainWindow.hide();
     mainWindow.setOpacity(1);
   });
 }

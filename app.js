@@ -229,12 +229,27 @@ function writeArtworkState() {
   localStorage.setItem(storageKeys.artwork, JSON.stringify(state.artwork));
 }
 
+function refreshArtworkDate() {
+  const today = todayDateKey();
+  if (state.artwork.date === today) {
+    return;
+  }
+
+  if (state.artwork.date && state.artwork.todayDrops.length > 0) {
+    state.artwork.history[state.artwork.date] = state.artwork.todayDrops;
+  }
+  state.artwork.date = today;
+  state.artwork.todayDrops = [];
+  writeArtworkState();
+}
+
 function randomJitter(range) {
   return (Math.random() - 0.5) * range;
 }
 
 // 選んだ色を1滴分のデータとして今日のキャンバスに追加する
 function addArtworkDrop(colorKey) {
+  refreshArtworkDate();
   const drop = {
     color: colorKey,
     x: 0.5 + randomJitter(0.5),
@@ -311,9 +326,9 @@ function dropsForDateKey(key) {
 }
 
 // 月間カレンダー風のギャラリー。各日のセルに、その日のキャンバスをそのまま小さく描画する
-// ギャラリーで表示・月送りできるのは2026年1月〜12月のみ
+// ギャラリーで表示・月送りできるのは2026年1月〜現在月のみ
 const GALLERY_MIN_MONTH_KEY = "2026-01";
-const GALLERY_MAX_MONTH_KEY = "2026-12";
+const GALLERY_MAX_MONTH_KEY = galleryMonthKey(new Date().getFullYear(), new Date().getMonth());
 
 function galleryMonthKey(year, month) {
   return `${year}-${(month + 1).toString().padStart(2, "0")}`;
@@ -769,7 +784,7 @@ function startSlow(proposalId, options = {}) {
   };
   document.querySelector("#slowTitle").textContent = state.currentSlow.title;
   document.querySelector("#slowInstruction").textContent = state.currentSlow.instruction;
-  document.querySelector("#slowDuration").textContent = `${state.currentSlow.seconds}秒`;
+  document.querySelector("#slowDuration").textContent = `最大${state.currentSlow.seconds}秒`;
 
   // 呼吸円だけを先に見せ、テキストは少し遅れてふわっと出す(自動起動時も含め、突然全部が現れる驚きを和らげる)
   const slowText = document.querySelector("#slowText");

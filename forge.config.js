@@ -5,7 +5,8 @@ module.exports = {
   packagerConfig: {
     name: "ゆっくりフレッシュ",
     executableName: "ゆっくりフレッシュ",
-    icon: "assets/app-icon.ico",
+    ...(process.platform === "win32" ? { icon: "assets/app-icon.ico" } : {}),
+    ...(process.platform === "darwin" ? { icon: "assets/app-icon.icns" } : {}),
     ignore: [
       "^/config\\.local\\.js$",
       "^/forge\\.config\\.js$",
@@ -35,7 +36,7 @@ module.exports = {
   makers: [
     {
       name: "@electron-forge/maker-zip",
-      platforms: ["win32"],
+      platforms: ["win32", "darwin"],
     },
   ],
 };

@@ -9,101 +9,6 @@ const storageKeys = {
   artwork: "micro-slow-artwork",
 };
 
-// デモ用に固定で用意したキャンバスの履歴。どのマシンで開いてもカレンダーが同じ見た目になるよう、
-// localStorageに依存せずコードに直接埋め込む(readArtworkStateで既存のhistoryにマージされる)。
-// 2026-07-24と2026-07-25の分はAI対話(DIALOGUES)と対になっているため、値を変えないこと。
-const DEMO_HISTORY = {};
-/*
-const DEMO_HISTORY = {
-  "2026-07-14": [
-    { color: "blue", x: 0.9208937276144674, y: 0.7597977933918486, size: 88.54445686126468 },
-    { color: "rose", x: 0.7905899743860655, y: 0.8756742453198244, size: 50.14629085738713 },
-  ],
-  "2026-07-15": [
-    { color: "rose", x: 0.8082849303123585, y: 0.06473363447630576, size: 56.54554109119813 },
-    { color: "gold", x: 0.6705588592375983, y: 0.5338498729366153, size: 69.42038345224093 },
-    { color: "rose", x: 0.09537504392007279, y: 0.15117849404963046, size: 51.13363827681991 },
-    { color: "green", x: 0.16027490397782718, y: 0.05299918305405471, size: 74.04108776583716 },
-  ],
-  "2026-07-16": [
-    { color: "gold", x: 0.15228039832572893, y: 0.4627245972372689, size: 77.81624876087717 },
-    { color: "gold", x: 0.6803934742397488, y: 0.854598339308988, size: 66.64430671589129 },
-    { color: "gold", x: 0.37043040562776997, y: 0.11276472888085798, size: 55.96656227027712 },
-    { color: "gold", x: 0.5939235195085057, y: 0.7237189630415971, size: 74.13806849975225 },
-    { color: "gold", x: 0.31837493812655515, y: 0.37515967916023496, size: 80.80459022972775 },
-    { color: "rose", x: 0.4938263250018179, y: 0.9635539873052452, size: 45.36905747662755 },
-  ],
-  "2026-07-17": [
-    { color: "green", x: 0.9513545939965046, y: 0.6073562074825947, size: 83.87521614013278 },
-    { color: "gold", x: 0.684582120510281, y: 0.8162214133817004, size: 66.20122515840217 },
-  ],
-  "2026-07-18": [
-    { color: "gold", x: 0.0351957958484711, y: 0.35560611483950777, size: 64.62120342936615 },
-    { color: "rose", x: 0.13663801440501977, y: 0.4395469470368053, size: 51.69528920638977 },
-  ],
-  "2026-07-19": [
-    { color: "gold", x: 0.6663268828816792, y: 0.5666213833116523, size: 44.8856121133168 },
-    { color: "green", x: 0.8134480823013821, y: 0.4606570872850284, size: 85.50719710112827 },
-    { color: "rose", x: 0.1837041297432307, y: 0.7375108128793482, size: 48.99358615840438 },
-    { color: "rose", x: 0.7658683332285972, y: 0.6688720868437398, size: 84.83348138970504 },
-    { color: "blue", x: 0.8699787797858817, y: 0.5254878256061162, size: 57.471357025777166 },
-  ],
-  "2026-07-20": [
-    { color: "gold", x: 0.4462136655859207, y: 0.7446815193422754, size: 67.93765815497659 },
-    { color: "blue", x: 0.8387856166454496, y: 0.3301209958533946, size: 58.11590713886942 },
-    { color: "gold", x: 0.604520221321762, y: 0.01856336769035627, size: 42.23249435870954 },
-    { color: "green", x: 0.6281419301339424, y: 0.0666528348948402, size: 59.969370356218825 },
-  ],
-  "2026-07-21": [
-    { color: "rose", x: 0.3706168474959437, y: 0.2361979441486537, size: 45.66182880787493 },
-    { color: "rose", x: 0.7420392017035963, y: 0.5394775694772959, size: 60.98149882589875 },
-    { color: "gold", x: 0.8781209006936965, y: 0.7496125767840424, size: 85.03912312207203 },
-  ],
-  "2026-07-22": [
-    { color: "blue", x: 0.617975694469442, y: 0.6196727297523015, size: 47.18493541596349 },
-    { color: "gold", x: 0.4557530378175745, y: 0.9861903400045997, size: 88.05941924944204 },
-    { color: "gold", x: 0.23302875060014638, y: 0.7653294675133655, size: 61.995646329518344 },
-    { color: "rose", x: 0.835221599088727, y: 0.21907791439356972, size: 82.91652118816768 },
-    { color: "green", x: 0.44933864477759033, y: 0.3727204775865366, size: 40.11727314367206 },
-    { color: "green", x: 0.21005652010983333, y: 0.7249682578729708, size: 83.5888787429856 },
-  ],
-  "2026-07-23": [
-    { color: "gold", x: 0.09320144410600295, y: 0.11004684216636362, size: 40.039994619551834 },
-    { color: "green", x: 0.6611964376544854, y: 0.5295006268563434, size: 56.39761613217602 },
-    { color: "gold", x: 0.07356643811838581, y: 0.15709053668398731, size: 76.83814575694767 },
-    { color: "gold", x: 0.8653794252745831, y: 0.6880308201183798, size: 88.13570668874303 },
-    { color: "blue", x: 0.1719338155226725, y: 0.8233627886731358, size: 66.60715340405622 },
-  ],
-  "2026-07-24": [
-    { color: "blue", x: 0.27249727633164667, y: 0.8188179554124205, size: 50.73048514437753 },
-    { color: "green", x: 0.04350217833476633, y: 0.3450273981240899, size: 47.4527939570617 },
-    { color: "blue", x: 0.3617015037720739, y: 0.33619852396643435, size: 72.7874762434532 },
-  ],
-  "2026-07-25": [
-    { color: "green", x: 0.3853407092319024, y: 0.39385616897767495, size: 89.40558654709454 },
-    { color: "green", x: 0.3640016761938065, y: 0.5826895557436498, size: 83.96759053151378 },
-    { color: "green", x: 0.27187794738740806, y: 0.6643250761045146, size: 45.49048458502317 },
-    { color: "green", x: 0.7406943622734677, y: 0.6269975257315061, size: 61.071573205227736 },
-    { color: "green", x: 0.6195540966347962, y: 0.6622053469701223, size: 70.14993959438915 },
-    { color: "gold", x: 0.5213555590533594, y: 0.4189559698582397, size: 88.03528395990496 },
-    { color: "gold", x: 0.6145663430308057, y: 0.509857341961123, size: 50.0664282430193 },
-    { color: "gold", x: 0.5871776473411436, y: 0.591271312753027, size: 48.36675857913927 },
-    { color: "gold", x: 0.35668366809903845, y: 0.3823651896593779, size: 63.08323735028455 },
-  ],
-  "2026-07-26": [
-    { color: "blue", x: 0.42107396443298573, y: 0.28934876124587293, size: 71.36104882819374 },
-    { color: "rose", x: 0.6524188305992471, y: 0.7183952647160382, size: 58.98213467109228 },
-    { color: "blue", x: 0.19883745091827632, y: 0.6021957384756349, size: 66.7481965390483 },
-    { color: "gold", x: 0.7746215938271601, y: 0.4392586713408965, size: 48.216543028810845 },
-  ],
-  "2026-07-27": [
-    { color: "green", x: 0.5536784192837465, y: 0.34718293651498027, size: 79.28471953648102 },
-    { color: "green", x: 0.31904582716374536, y: 0.5824619837451602, size: 54.62918374651937 },
-    { color: "rose", x: 0.7218395164837291, y: 0.6584716239481027, size: 67.19384752618304 },
-  ],
-};
-*/
-
 // 出口で選べる感覚色と、キャンバスの滲み描画に使う実際のRGB値の対応表
 const senseColorHex = {
   green: "#6f9f89",
@@ -154,7 +59,6 @@ const state = {
   startedAutomatically: new Set(),
   artwork: readArtworkState(),
   senseSelected: false,
-  // sendoffTimer: null,
   galleryYear: new Date().getFullYear(),
   galleryMonth: new Date().getMonth(),
 };
@@ -167,7 +71,6 @@ const views = {
   home: document.querySelector("#homeView"),
   slow: document.querySelector("#slowView"),
   transition: document.querySelector("#transitionView"),
-  // sendoff: document.querySelector("#sendoffView"),
   gallery: document.querySelector("#galleryView"),
 };
 
@@ -195,27 +98,15 @@ function todayDateKey() {
   return `${year}-${month}-${day}`;
 }
 
-function withDemoHistory(history) {
-  const merged = { ...history };
-  for (const key of Object.keys(DEMO_HISTORY)) {
-    if (!merged[key]) {
-      merged[key] = DEMO_HISTORY[key];
-    }
-  }
-  return merged;
-}
-
 // 今日のキャンバス(todayDrops)をlocalStorageに保存。日付が変わっていた場合は、前日ぶんをhistoryに確定保存してから、新しい空のキャンバスを始める
 function readArtworkState() {
   const today = todayDateKey();
-  const fallback = { date: today, todayDrops: [], history: withDemoHistory({}) };
+  const fallback = { date: today, todayDrops: [], history: {} };
   try {
     const raw = localStorage.getItem(storageKeys.artwork);
     if (!raw) return fallback;
     const parsed = JSON.parse(raw);
-    const history = withDemoHistory(
-      typeof parsed.history === "object" && parsed.history !== null ? parsed.history : {}
-    );
+    const history = typeof parsed.history === "object" && parsed.history !== null ? parsed.history : {};
     if (parsed.date !== today) {
       if (parsed.date && Array.isArray(parsed.todayDrops) && parsed.todayDrops.length > 0) {
         history[parsed.date] = parsed.todayDrops;
@@ -322,8 +213,7 @@ function dateKeyFor(year, month, day) {
 
 function dropsForDateKey(key) {
   if (key === state.artwork.date) {
-    // 今日の本物の選択がまだなければ、デモ用の固定データ(あれば)を代わりに見せる
-    return state.artwork.todayDrops.length > 0 ? state.artwork.todayDrops : state.artwork.history[key] || [];
+    return state.artwork.todayDrops;
   }
   return state.artwork.history[key] || [];
 }
@@ -407,121 +297,11 @@ function openGalleryDay(key) {
     emptyNote.classList.remove("hidden");
     emptyNote.textContent = key === todayDateKey() ? "まだ何も描かれていません" : "この日の記録はありません";
   }
-
-  // AI対話は、その構図を見て書いた日付にしか用意していないため、それ以外の日はボタンをグレーアウトする
-  // const playButton = document.querySelector("#dialoguePlayButton");
-  // const script = DIALOGUES[key];
-  // dialogueState.script = script || null;
-  // playButton.disabled = !script;
-  // playButton.setAttribute(
-  //   "aria-label",
-  //   script ? "AI対話を再生" : "AI対話はこのキャンバス用にまだ用意されていません"
-  // );
 }
 
 function closeGalleryDay() {
-  // resetDialogue();
   document.querySelector("#galleryDayOverlay").classList.add("hidden");
 }
-
-// デモ用に用意した、AI同士が絵について語り合う対話(畑中アプリのSAMPLE_DIALOGUEを踏襲)。
-// 実際のキャンバスの構図を見て書いているため、日付ごとに台本が異なる(DIALOGUES[日付])。
-// 対応する日付以外では構図が一致しないため、その日を開いたときだけボタンを有効にする。
-/*
-const DIALOGUES = {
-  // 静かな緑5滴が、あたたかい金色4滴を包み込むように寄り添う構図
-  "2026-07-25": [
-    { speaker: "AI-A", text: "見て、あたたかい金色が真ん中に集まって、そっと寄り添っている" },
-    { speaker: "AI-B", text: "その周りを、静かな緑が包み込むように囲んでいるね。守られているような、でも窮屈ではない距離感だ" },
-    { speaker: "AI-A", text: "色同士が混じり合わずに、それぞれの形を保ったまま隣り合っているのも面白いね" },
-    { speaker: "AI-C", text: "少し脱線してもいい?この配置を見ていると、焚き火を囲む人だかりを思い出すんだ。真ん中のあたたかい金色が炎で、緑がそれを囲む人たちみたいに見える" },
-    { speaker: "AI-B", text: "いいたとえだね。今日は、遠くへ離れていった色がひとつもなかった" },
-    { speaker: "AI-A", text: "そうだね。今日はただ、寄り添うことを選んだ一日だったのかもしれない" },
-  ],
-  // 澄んだ青2滴と静かな緑1滴が画面の左側に寄り、右半分がずっと余白のままの構図
-  "2026-07-24": [
-    { speaker: "AI-A", text: "今日は、色がずいぶん左側に寄っているね。右側はずっと静かなままだ" },
-    { speaker: "AI-B", text: "澄んだ青が二つ、大きさを変えながら並んでいる。近くにいるけど、重なってはいない" },
-    { speaker: "AI-A", text: "その端に、静かな緑がほんの少しだけ顔をのぞかせているね。切れてしまいそうなくらい、端にいる" },
-    { speaker: "AI-C", text: "少し脱線してもいい?この配置を見ていると、窓の外を眺めている誰かの横顔を思い出すんだ。青が輪郭で、緑がその向こうに見える景色みたいに" },
-    { speaker: "AI-B", text: "面白い見方だね。右側の余白は、まだ何も描かれていないだけかもしれない" },
-    { speaker: "AI-A", text: "そうだね。今日は、少しの色と、たくさんの余白でできていたのかもしれない" },
-  ],
-};
-
-const SPEAKER_PAUSE_MS = 350;
-const dialogueState = { playing: false, timer: null, index: -1, script: null };
-
-const PLAY_ICON_PATH = "M8 5v14l11-7z";
-const PAUSE_ICON_PATH = "M7 5h4v14H7zM13 5h4v14h-4z";
-
-function setDialogueButtonIcon(playing) {
-  const button = document.querySelector("#dialoguePlayButton");
-  const icon = document.querySelector("#dialoguePlayIcon");
-  icon.setAttribute("d", playing ? PAUSE_ICON_PATH : PLAY_ICON_PATH);
-  button.setAttribute("aria-label", playing ? "AI対話を一時停止" : "AI対話を再生");
-  button.classList.toggle("is-playing", playing);
-}
-
-function speakDialogueLine(index) {
-  const lineEl = document.querySelector("#dialogueLine");
-  const script = dialogueState.script;
-  if (!script || index >= script.length) {
-    resetDialogue();
-    return;
-  }
-  dialogueState.index = index;
-  const line = script[index];
-  const previousSpeaker = index > 0 ? script[index - 1].speaker : null;
-  const speakerChanged = previousSpeaker !== null && previousSpeaker !== line.speaker;
-
-  lineEl.textContent = `${line.speaker}: ${line.text}`;
-  lineEl.classList.add("visible");
-
-  if (!window.speechSynthesis) {
-    dialogueState.timer = window.setTimeout(() => speakDialogueLine(index + 1), 2600);
-    return;
-  }
-
-  const utterance = new SpeechSynthesisUtterance(line.text);
-  utterance.lang = "ja-JP";
-  utterance.onend = () => {
-    if (!dialogueState.playing) return;
-    lineEl.classList.remove("visible");
-    dialogueState.timer = window.setTimeout(
-      () => speakDialogueLine(index + 1),
-      speakerChanged ? SPEAKER_PAUSE_MS : 150
-    );
-  };
-  utterance.onerror = () => {
-    if (!dialogueState.playing) return;
-    speakDialogueLine(index + 1);
-  };
-  window.speechSynthesis.speak(utterance);
-}
-
-// 再生ボタンを押すと、一時停止していた行から続きを話す(常に最初からにはしない)
-function playDialogue() {
-  dialogueState.playing = true;
-  setDialogueButtonIcon(true);
-  speakDialogueLine(Math.max(dialogueState.index, 0));
-}
-
-// 一時停止:途中経過(dialogueState.index)は保持したまま、音声とタイマーだけ止める
-function pauseDialogue() {
-  dialogueState.playing = false;
-  window.clearTimeout(dialogueState.timer);
-  window.speechSynthesis?.cancel();
-  setDialogueButtonIcon(false);
-}
-
-// 完全リセット:オーバーレイを閉じた時や対話が最後まで終わった時に、最初から再生できる状態に戻す
-function resetDialogue() {
-  pauseDialogue();
-  dialogueState.index = -1;
-  document.querySelector("#dialogueLine").classList.remove("visible");
-}
-*/
 
 function changeGalleryMonth(delta) {
   const monthKey = galleryMonthKey(state.galleryYear, state.galleryMonth);
@@ -963,17 +743,8 @@ function finishSlow() {
   state.transitionTimer = window.setTimeout(completeTransition, 60000);
 }
 
-// 畑中アプリのSendOffScreenを踏襲:「いってらっしゃい」のみを見せ、1.8秒後に自動で戻る
-
-// function showSendoff() {
-//   window.clearTimeout(state.transitionTimer);
-//   showView("sendoff");
-//   state.sendoffTimer = window.setTimeout(completeTransition, 1800);
-// }
-
 function completeTransition() {
   window.clearTimeout(state.transitionTimer);
-  // window.clearTimeout(state.sendoffTimer);
   showView("home");
   renderHome();
   desktop?.leaveSlowMode?.();
@@ -1091,13 +862,6 @@ document.querySelector("#galleryGrid").addEventListener("click", (event) => {
   openGalleryDay(cell.dataset.dateKey);
 });
 document.querySelector("#galleryDayCloseButton").addEventListener("click", closeGalleryDay);
-// document.querySelector("#dialoguePlayButton").addEventListener("click", () => {
-//   if (dialogueState.playing) {
-//     pauseDialogue();
-//   } else {
-//     playDialogue();
-//   }
-// });
 document.querySelector("#galleryDayOverlay").addEventListener("click", (event) => {
   if (event.target.id === "galleryDayOverlay") {
     closeGalleryDay();
@@ -1131,7 +895,6 @@ document.querySelectorAll(".sense-button").forEach((button) => {
     requestAnimationFrame(() => ripple.classList.add("spread"));
 
     window.setTimeout(() => {
-      // showSendoff();
       completeTransition();
     }, duration);
   });
@@ -1149,10 +912,7 @@ document.addEventListener("keydown", (event) => {
   if (state.view === "slow") {
     finishSlow();
   } else if (state.view === "transition") {
-    // showSendoff();
     completeTransition();
-  // } else if (state.view === "sendoff") {
-  //   completeTransition();
   }
 });
 

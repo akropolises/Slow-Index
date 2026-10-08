@@ -80,7 +80,7 @@ const manualForm = document.querySelector("#manualForm");
 const googleConnect = document.querySelector("#googleConnect");
 const googleStatus = document.querySelector("#googleStatus");
 const onboardingStatus = document.querySelector("#onboardingStatus");
-const progressRing = document.querySelector("#progressRing");
+const rootEl = document.documentElement;
 
 function readRecentSlowIds() {
   try {
@@ -575,6 +575,8 @@ function startSlow(proposalId, options = {}) {
   const slowText = document.querySelector("#slowText");
   slowText.classList.remove("visible");
   showView("slow", { fadeMs: 700 });
+  document.body.classList.add("is-slow");
+  centerMistOnBreathCircle();
   window.setTimeout(() => {
     slowText.classList.add("visible");
   }, 500);
@@ -713,24 +715,53 @@ function reloadCurrentSource() {
   renderHome();
 }
 
+function setMist(value, transitionMs) {
+  rootEl.style.transition = `--mist ${transitionMs}ms linear`;
+  rootEl.style.setProperty("--mist", value.toFixed(3));
+}
+
+// 霧の進み具合を経過時間から決める。霧は画面の端から呼吸円へほぼ一定の速さで寄ってくるので、
+// 秒数は見えなくても「あとどのくらいで包まれるか」は感覚的にわかる。わずかなゆらぎで機械的な等速感だけを消す。
+// 最大秒数で霧の縁が呼吸円に届いて完全に包まれ、ひと呼吸おいてから終わる
+function mistAmount(elapsed, ratio) {
+  const drift = 0.03 * Math.sin(elapsed * 0.9) * Math.sin(elapsed * 0.37) * ratio * (1 - ratio) * 4;
+  return Math.min(Math.max(ratio + drift, 0), 1);
+}
+
+// 霧が寄ってくる中心を呼吸円に合わせる(呼吸円を表示していないときは文章に合わせる)
+function centerMistOnBreathCircle() {
+  const circleRect = document.querySelector(".breath-circle").getBoundingClientRect();
+  const rect = circleRect.width > 0 ? circleRect : document.querySelector("#slowText").getBoundingClientRect();
+  rootEl.style.setProperty("--mist-x", `${rect.left + rect.width / 2}px`);
+  rootEl.style.setProperty("--mist-y", `${rect.top + rect.height / 2}px`);
+}
+
+const MIST_HOLD_MS = 1600;
+
 function runProgress() {
   window.clearInterval(state.timer);
   state.startedAt = Date.now();
-  progressRing.style.background = "conic-gradient(var(--accent) 0deg, rgba(46, 111, 101, 0.1) 0deg)";
+  setMist(0, 0);
   state.timer = window.setInterval(() => {
     const elapsed = (Date.now() - state.startedAt) / 1000;
     const ratio = Math.min(elapsed / state.currentSlow.seconds, 1);
-    const degrees = Math.round(ratio * 360);
-    progressRing.style.background = `conic-gradient(var(--accent) ${degrees}deg, rgba(46, 111, 101, 0.1) ${degrees}deg)`;
     if (ratio >= 1) {
-      finishSlow();
+      window.clearInterval(state.timer);
+      setMist(1, 600);
+      state.timer = window.setTimeout(finishSlow, MIST_HOLD_MS);
+      return;
     }
+    setMist(mistAmount(elapsed, ratio), 300);
   }, 250);
 }
 
 function finishSlow() {
   window.clearInterval(state.timer);
+  window.clearTimeout(state.timer);
   window.clearTimeout(state.transitionTimer);
+  // 霧が晴れていくのに合わせて、色選択の画面がゆっくり現れる
+  document.body.classList.remove("is-slow");
+  setMist(0, 1200);
   const event = state.currentProposal?.event;
   if (event) {
     state.dismissed.add(event.id);
@@ -739,7 +770,7 @@ function finishSlow() {
   views.transition.classList.remove("is-selecting");
   document.querySelectorAll(".sense-button").forEach((item) => item.classList.remove("selected"));
   document.querySelectorAll(".sense-ripple").forEach((ripple) => ripple.remove());
-  showView("transition");
+  showView("transition", { fadeMs: 900 });
   state.transitionTimer = window.setTimeout(completeTransition, 60000);
 }
 
@@ -913,6 +944,13 @@ document.addEventListener("keydown", (event) => {
     finishSlow();
   } else if (state.view === "transition") {
     completeTransition();
+  }
+});
+
+// 自動開始時はウィンドウが全画面に切り替わるため、呼吸円の位置が変わったら霧の中心も合わせ直す
+window.addEventListener("resize", () => {
+  if (state.view === "slow") {
+    centerMistOnBreathCircle();
   }
 });
 

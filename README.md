@@ -84,6 +84,7 @@ Client SecretはGitにコミットしません。
 - `scripts/make-with-local-config.js`: `config.local.js` を成果物にだけ含める検証用ビルドスクリプト
 - `assets/tray-icon.png`: Trayとウィンドウで使うアプリアイコン
 - `assets/app-icon.ico`: Windowsビルド用アイコン
+- `assets/fonts/`: ゆっくりフレッシュ中と色選択で使うZen Kaku Gothic New(SIL Open Font License、`OFL.txt` を同梱)
 - `micro-slows.js`: アプリが読み込むMicro Slowデータ
 - `config.js`: 共有用の既定設定
 - `config.example.js`: 個人設定ファイルのひな形

@@ -13,6 +13,21 @@
   font-family: "Yu Gothic UI", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
 }
 
+/* 展示会場のネット環境に依存しないよう、フォントは同梱する(SIL Open Font License, assets/fonts/OFL.txt) */
+@font-face {
+  font-family: "Zen Kaku Gothic New";
+  src: url("assets/fonts/ZenKakuGothicNew-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Zen Kaku Gothic New";
+  src: url("assets/fonts/ZenKakuGothicNew-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-display: swap;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -38,9 +53,100 @@ button {
 }
 
 .app-shell {
+  position: relative;
+  z-index: 1;
   width: min(960px, calc(100% - 32px));
   margin: 0 auto;
   padding: 28px 0;
+}
+
+/* ゆっくりフレッシュ中に画面全体を包んでいく霧。進み具合(--mist: 0〜1)はapp.jsが経過時間から決める。
+   霧は画面の端から呼吸円(--mist-x, --mist-y)に向かって寄ってきて、晴れている範囲が少しずつ狭まる。
+   .panelはtransformを持つため、position:fixedが画面基準にならない。そこで霧はbody直下に置き、
+   ゆっくりフレッシュ中は枠を消したpanelの文字だけを霧の上に浮かべる */
+@property --mist {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+/* ゆっくりフレッシュ中だけ背景を少し深い色にして、白い霧が寄ってくる縁を見えやすくする */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(240, 236, 228, 0.6), transparent 60%),
+    linear-gradient(160deg, #dedbd4 0%, #d7d5cf 55%, #ddd7cd 100%);
+  opacity: 0;
+  transition: opacity 900ms ease;
+}
+
+body.is-slow::before {
+  opacity: 1;
+}
+
+.mist-layer {
+  --mist-clear: calc((1 - var(--mist)) * 100vmax - 22vmax);
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  /* 霧の端が見え始めるまでは、ふわっと現れる */
+  opacity: min(1, calc(var(--mist) * 5));
+  background: rgba(251, 250, 247, 0.9);
+  mask: radial-gradient(
+    circle at var(--mist-x, 50%) var(--mist-y, 40%),
+    transparent var(--mist-clear),
+    #000 calc(var(--mist-clear) + 22vmax)
+  );
+}
+
+/* 霧の濃淡。大きなにじみがそれぞれ別の周期でゆっくり漂い、濃さが一様に増していくようには見せない */
+.mist-layer span {
+  position: absolute;
+  width: 120vmax;
+  height: 120vmax;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0) 62%);
+  animation: mist-drift 46s ease-in-out infinite alternate;
+}
+
+.mist-layer span:nth-child(1) {
+  top: -50vmax;
+  left: -40vmax;
+}
+
+.mist-layer span:nth-child(2) {
+  bottom: -60vmax;
+  right: -50vmax;
+  animation-duration: 61s;
+  animation-delay: -20s;
+}
+
+.mist-layer span:nth-child(3) {
+  top: -10vmax;
+  left: 10vmax;
+  opacity: 0.7;
+  animation-duration: 53s;
+  animation-direction: alternate-reverse;
+}
+
+body.is-slow .topbar {
+  opacity: 0;
+}
+
+body.is-slow #slowView {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+body.is-slow .slow-actions .quiet-button {
+  background: rgba(255, 253, 248, 0.55);
 }
 
 .topbar {
@@ -49,6 +155,7 @@ button {
   justify-content: center;
   text-align: center;
   gap: 16px;
+  transition: opacity 700ms ease;
 }
 
 .section-head {
@@ -608,16 +715,36 @@ select {
     radial-gradient(circle at 40% 35%, rgba(255, 255, 255, 0.95), transparent 35%),
     radial-gradient(circle at 55% 58%, rgba(46, 111, 101, 0.24), transparent 58%),
     radial-gradient(circle, rgba(239, 198, 107, 0.36), rgba(217, 139, 119, 0.18));
-  filter: blur(0.2px);
+  /* 霧の縁が近づいてきたら、呼吸円の輪郭も霧に溶けていく */
+  --mist-near: max(0, calc((var(--mist) - 0.6) / 0.4));
+  filter: blur(calc(0.2px + var(--mist-near) * 14px)) opacity(calc(1 - var(--mist-near) * 0.55));
   animation: breathe 8s ease-in-out infinite;
 }
 
-.progress-ring {
-  position: absolute;
-  inset: 8%;
-  border-radius: 50%;
-  background: conic-gradient(var(--accent) 0deg, rgba(46, 111, 101, 0.1) 0deg);
-  mask: radial-gradient(circle, transparent 60%, #000 61%);
+#slowDuration {
+  color: var(--muted);
+}
+
+/* ゆっくりフレッシュ中と色選択の文字は、作業用のUIフォントから離して、細めでゆったり組む */
+:is(#slowView, #transitionView) {
+  font-family: "Zen Kaku Gothic New", "Yu Gothic UI", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+}
+
+#slowTitle {
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  margin-bottom: 12px;
+}
+
+#slowDuration {
+  font-weight: 400;
+  letter-spacing: 0.1em;
+}
+
+#slowView .slow-instruction,
+#transitionView .sense-prompt {
+  letter-spacing: 0.05em;
+  line-height: 1.9;
 }
 
 .slow-instruction {
@@ -715,6 +842,21 @@ select {
   justify-content: center;
   gap: 10px;
   margin-top: 18px;
+}
+
+@keyframes mist-drift {
+  from {
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    transform: translate(18vmax, 10vmax) scale(1.15);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mist-layer span {
+    animation: none;
+  }
 }
 
 @keyframes breathe {

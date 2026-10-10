@@ -3,8 +3,8 @@ const path = require("path");
 
 module.exports = {
   packagerConfig: {
-    name: "ゆっくりフレッシュ",
-    executableName: "ゆっくりフレッシュ",
+    name: "ゆっくリフレッシュ",
+    executableName: "ゆっくリフレッシュ",
     ...(process.platform === "win32" ? { icon: "assets/app-icon.ico" } : {}),
     ...(process.platform === "darwin" ? { icon: "assets/app-icon.icns" } : {}),
     ignore: [

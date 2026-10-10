@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <title>ゆっくリフレッシュ コンセプト</title>
+    <style>
+      @font-face {
+        font-family: "Zen Kaku Gothic New";
+        src: url("../../assets/fonts/ZenKakuGothicNew-Regular.ttf") format("truetype");
+        font-weight: 400;
+      }
+
+      @font-face {
+        font-family: "Zen Kaku Gothic New";
+        src: url("../../assets/fonts/ZenKakuGothicNew-Medium.ttf") format("truetype");
+        font-weight: 500;
+      }
+
+      :root {
+        --text: #20211f;
+        --muted: #6b6d66;
+        --line: #d9d5ca;
+        --panel: #fffdf8;
+        --accent: #2e6f65;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 1280px;
+        height: 720px;
+        margin: 0;
+        overflow: hidden;
+        font-family: "Zen Kaku Gothic New", "Yu Gothic UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 14% 8%, rgba(239, 198, 107, 0.2), transparent 480px),
+          linear-gradient(135deg, #f6f4ef 0%, #edf2ee 48%, #f8f2ec 100%);
+      }
+
+      .layer {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        transition: opacity 1400ms ease;
+        pointer-events: none;
+      }
+
+      .layer.show {
+        opacity: 1;
+      }
+
+      /* 見出し */
+      .headline {
+        position: absolute;
+        left: 0;
+        right: 0;
+        z-index: 10;
+        text-align: center;
+        opacity: 0;
+        transition: opacity 1200ms ease;
+      }
+
+      .headline.show {
+        opacity: 1;
+      }
+
+      .headline.center {
+        top: 296px;
+      }
+
+      .headline.top {
+        top: 62px;
+      }
+
+      .headline .main {
+        margin: 0;
+        font-size: 36px;
+        font-weight: 500;
+        letter-spacing: 0.1em;
+      }
+
+      .headline .sub {
+        margin: 16px 0 0;
+        color: var(--muted);
+        font-size: 20px;
+        letter-spacing: 0.08em;
+      }
+
+      .headline .sub:empty {
+        display: none;
+      }
+
+      /* Fastな言葉 */
+      .fast-word {
+        position: absolute;
+        font-size: 40px;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        opacity: 0;
+        transition: opacity 900ms ease, filter 1800ms ease;
+      }
+
+      .fast-word.show {
+        opacity: 1;
+      }
+
+      .fast-word.blur {
+        opacity: 0;
+        filter: blur(14px);
+        transition: opacity 1800ms ease, filter 1800ms ease;
+      }
+
+      /* アプリ名 */
+      .app-name {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 430px;
+        text-align: center;
+        color: var(--accent);
+        font-size: 28px;
+        font-weight: 500;
+        letter-spacing: 0.18em;
+      }
+
+      .app-name small {
+        display: block;
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: 18px;
+        font-weight: 400;
+        letter-spacing: 0.08em;
+        opacity: 0;
+        transition: opacity 1200ms ease;
+      }
+
+      .app-name small.show {
+        opacity: 1;
+      }
+
+      /* 予定のタイムライン */
+      .timeline {
+        position: absolute;
+        left: 190px;
+        right: 190px;
+        top: 300px;
+        height: 200px;
+      }
+
+      .timeline-axis {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 150px;
+        height: 2px;
+        background: var(--line);
+      }
+
+      .timeline-tick {
+        position: absolute;
+        top: 166px;
+        transform: translateX(-50%);
+        color: var(--muted);
+        font-size: 18px;
+      }
+
+      .timeline-tick::before {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: -22px;
+        width: 2px;
+        height: 12px;
+        background: var(--line);
+      }
+
+      .timeline-meeting {
+        position: absolute;
+        left: 66.7%;
+        right: 0;
+        top: 70px;
+        height: 64px;
+        padding: 10px 16px;
+        border-radius: 12px;
+        background: #e6ece9;
+        border: 1px solid #cfdad5;
+        font-size: 18px;
+        line-height: 1.4;
+      }
+
+      .timeline-slow {
+        position: absolute;
+        left: 33.3%;
+        top: 58px;
+        width: 6.7%;
+        height: 88px;
+        border-radius: 10px;
+        background: radial-gradient(circle at 50% 40%, #ffffff, #dbe8df);
+        border: 1px solid #c3d6cc;
+      }
+
+      .timeline-margin {
+        position: absolute;
+        left: 40%;
+        width: 26.7%;
+        top: 58px;
+        height: 88px;
+        display: grid;
+        place-items: center;
+        border-radius: 10px;
+        border: 2px dashed rgba(215, 164, 71, 0.8);
+        background: rgba(239, 198, 107, 0.12);
+        color: #b07f22;
+        font-size: 24px;
+        font-weight: 500;
+        opacity: 0;
+        transition: opacity 1400ms ease;
+      }
+
+      .timeline.margin .timeline-margin {
+        opacity: 1;
+      }
+
+      /* PC画面 */
+      .screen {
+        position: absolute;
+        left: 224px;
+        top: 214px;
+        width: 832px;
+        height: 468px;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 0 0 10px #2a2c2a, 0 24px 60px rgba(30, 40, 35, 0.28);
+      }
+
+      .screen-inner {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1280px;
+        height: 720px;
+        transform: scale(0.65);
+        transform-origin: 0 0;
+        background:
+          radial-gradient(circle at 78% 18%, rgba(239, 198, 107, 0.35), transparent 420px),
+          radial-gradient(circle at 12% 88%, rgba(102, 140, 168, 0.35), transparent 480px),
+          linear-gradient(140deg, #c9d6d0 0%, #dfe4dc 45%, #e9ddd2 100%);
+      }
+
+      .mock-window {
+        position: absolute;
+        left: 100px;
+        top: 50px;
+        width: 1080px;
+        height: 580px;
+        border-radius: 10px;
+        background: #fff;
+        box-shadow: 0 18px 50px rgba(30, 40, 35, 0.22);
+        overflow: hidden;
+      }
+
+      .mock-window .bar {
+        height: 40px;
+        padding: 10px 16px;
+        background: #f1f0ec;
+        border-bottom: 1px solid #e3e1da;
+        color: var(--muted);
+        font-size: 16px;
+      }
+
+      .mock-window .body {
+        padding: 40px 64px;
+        font-size: 28px;
+        line-height: 1.9;
+      }
+
+      .mock-window .body h1 {
+        margin: 0 0 14px;
+        font-size: 36px;
+        font-weight: 500;
+      }
+
+      .mock-window .body p {
+        margin: 0;
+        white-space: pre-wrap;
+      }
+
+      .caret {
+        display: inline-block;
+        width: 2px;
+        height: 1.1em;
+        margin-left: 2px;
+        vertical-align: -0.18em;
+        background: var(--text);
+      }
+
+      .caret.blink {
+        animation: blink 1s steps(1) infinite;
+      }
+
+      @keyframes blink {
+        50% {
+          opacity: 0;
+        }
+      }
+
+      .mock-taskbar {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 42px;
+        background: rgba(246, 244, 239, 0.86);
+      }
+
+      .screen-app {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+      }
+
+      .screen-app iframe {
+        width: 100%;
+        height: 100%;
+        border: 0;
+        display: block;
+      }
+
+      /* Enterキー */
+      .keycap {
+        position: absolute;
+        left: 1088px;
+        top: 540px;
+        display: grid;
+        place-items: center;
+        width: 120px;
+        height: 76px;
+        border-radius: 14px;
+        background: #fffdf8;
+        border: 1px solid #cfcbc0;
+        box-shadow: 0 6px 0 #cfcbc0, 0 12px 24px rgba(30, 40, 35, 0.18);
+        font-size: 24px;
+        font-weight: 500;
+        letter-spacing: 0.04em;
+        opacity: 0;
+        transition: opacity 900ms ease, transform 90ms ease, box-shadow 90ms ease;
+      }
+
+      .keycap.show {
+        opacity: 1;
+      }
+
+      .keycap.pressed {
+        transform: translateY(5px);
+        box-shadow: 0 1px 0 #cfcbc0, 0 4px 10px rgba(30, 40, 35, 0.18);
+        background: #eef4f1;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Fast -->
+    <div class="layer show" id="fastLayer">
+      <span class="fast-word" style="left: 190px; top: 190px">もっと速く</span>
+      <span class="fast-word" style="left: 540px; top: 320px">もっと多く</span>
+      <span class="fast-word" style="left: 760px; top: 450px">もっと効率よく</span>
+    </div>
+
+    <!-- コンセプト・結び -->
+    <div class="layer" id="nameLayer">
+      <div class="app-name">ゆっくリフレッシュ<small id="appKind">Googleカレンダーと連携する、パソコンのデスクトップアプリ</small></div>
+    </div>
+
+    <!-- タイムライン -->
+    <div class="layer" id="timelineLayer">
+      <div class="timeline" id="timeline">
+        <div class="timeline-meeting">10:00<br>次の予定</div>
+        <div class="timeline-slow"></div>
+        <div class="timeline-margin">4分</div>
+        <div class="timeline-axis"></div>
+        <span class="timeline-tick" style="left: 33.3%">9:55</span>
+        <span class="timeline-tick" style="left: 40%">9:56</span>
+        <span class="timeline-tick" style="left: 66.7%">10:00</span>
+      </div>
+    </div>
+
+    <!-- PC画面 -->
+    <div class="layer" id="screenLayer">
+      <div class="screen">
+        <div class="screen-inner">
+          <div class="mock-window">
+            <div class="bar">展示準備メモ</div>
+            <div class="body">
+              <h1>展示準備メモ</h1>
+              <p id="workText"></p>
+            </div>
+          </div>
+          <div class="mock-taskbar"></div>
+          <div class="screen-app" id="screenApp">
+            <iframe id="appFrame" title="ゆっくリフレッシュ"></iframe>
+          </div>
+        </div>
+      </div>
+      <div class="keycap" id="keycap">Enter</div>
+    </div>
+
+    <div class="headline" id="headline">
+      <p class="main"></p>
+      <p class="sub"></p>
+    </div>
+
+    <script src="recorder.js"></script>
+    <script src="concept.js"></script>
+  </body>
+</html>

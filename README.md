@@ -82,9 +82,10 @@ Client SecretはGitにコミットしません。
 - `electron-preload.js`: Electron preload bridge
 - `forge.config.js`: Electron ForgeのWindows zipビルド設定
 - `scripts/make-with-local-config.js`: `config.local.js` を成果物にだけ含める検証用ビルドスクリプト
+- `scripts/demo/`: 展示用デモ動画(操作デモ・コンセプト)の録画スクリプト
 - `assets/tray-icon.png`: Trayとウィンドウで使うアプリアイコン
 - `assets/app-icon.ico`: Windowsビルド用アイコン
-- `assets/fonts/`: ゆっくりフレッシュ中と色選択で使うZen Kaku Gothic New(SIL Open Font License、`OFL.txt` を同梱)
+- `assets/fonts/`: ゆっくリフレッシュ中と色選択で使うZen Kaku Gothic New(SIL Open Font License、`OFL.txt` を同梱)
 - `micro-slows.js`: アプリが読み込むMicro Slowデータ
 - `config.js`: 共有用の既定設定
 - `config.example.js`: 個人設定ファイルのひな形
@@ -123,6 +124,32 @@ npm run make:local
 ```
 
 この場合も `config.local.js` はGitには入りません。packaging中にだけ成果物へコピーされます。
+
+展示用の動画(いずれもMP4、1920x1080、24fps、無音、ループ再生向け)は `scripts/demo/` のスクリプトで録画します。録画中は約1分間、デモ用のウィンドウが最前面に表示されます。動画ではサンプルの予定と時計を使い、実アプリの記録やGoogle連携には触れません。
+
+操作デモ(約57秒)は次で録画します。ゆっくリフレッシュ本体は5倍速で見せます。
+
+```powershell
+npm run demo:record
+```
+
+成果物は `out/demo/micro-slow-demo.mp4` に出力されます。
+
+体験の前に見せるコンセプト動画(約72秒)は次で録画します。この動画だけで体験できるよう、Fastな毎日に「ちょうどよい遅さ」を届けるという考え方、Googleカレンダーと連携するデスクトップアプリであること、作業中でも予定5分前に全画面で自動開始すること、画面の一文にしたがって感覚を味わうこと、Enterキーですぐ終えられること、最後に色を選ぶこと、4分前には終わることを、ひとつずつゆっくり伝えます。
+
+```powershell
+npm run demo:concept
+```
+
+成果物は `out/demo/micro-slow-concept.mp4` に出力されます。
+
+同じ内容を約42秒に詰めた短い版は次で録画します。「4分前には終わる」の場面を省き、色を選ぶ画面は一瞬映すだけにして、それ以外の体験に必要な説明は残しています。
+
+```powershell
+npm run demo:concept-short
+```
+
+成果物は `out/demo/micro-slow-concept-short.mp4` に出力されます。
 
 複数人で開発する場合は、最初に `CONTRIBUTING.md` を確認してください。
 

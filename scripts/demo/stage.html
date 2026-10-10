@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <title>ゆっくリフレッシュ デモ</title>
+    <style>
+      @font-face {
+        font-family: "Zen Kaku Gothic New";
+        src: url("../../assets/fonts/ZenKakuGothicNew-Regular.ttf") format("truetype");
+        font-weight: 400;
+      }
+
+      @font-face {
+        font-family: "Zen Kaku Gothic New";
+        src: url("../../assets/fonts/ZenKakuGothicNew-Medium.ttf") format("truetype");
+        font-weight: 500;
+      }
+
+      :root {
+        --text: #20211f;
+        --muted: #6b6d66;
+        --line: #d9d5ca;
+        --panel: #fffdf8;
+        --accent: #2e6f65;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 1280px;
+        height: 720px;
+        margin: 0;
+        overflow: hidden;
+        font-family: "Zen Kaku Gothic New", "Yu Gothic UI", sans-serif;
+        color: var(--text);
+        background: #000;
+      }
+
+      .desktop {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(circle at 78% 18%, rgba(239, 198, 107, 0.35), transparent 420px),
+          radial-gradient(circle at 12% 88%, rgba(102, 140, 168, 0.35), transparent 480px),
+          linear-gradient(140deg, #c9d6d0 0%, #dfe4dc 45%, #e9ddd2 100%);
+      }
+
+      /* 作業中のウィンドウ(汎用のメモエディタ) */
+      .work-window {
+        position: absolute;
+        left: 70px;
+        top: 46px;
+        width: 760px;
+        height: 580px;
+        border-radius: 10px;
+        background: #fff;
+        box-shadow: 0 18px 50px rgba(30, 40, 35, 0.22);
+        overflow: hidden;
+      }
+
+      .window-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        height: 34px;
+        padding: 0 12px;
+        background: #f1f0ec;
+        border-bottom: 1px solid #e3e1da;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .window-bar .title {
+        flex: 1;
+      }
+
+      .window-bar .controls {
+        display: flex;
+        gap: 14px;
+        font-size: 13px;
+        color: #8c8e87;
+      }
+
+      .work-toolbar {
+        display: flex;
+        gap: 8px;
+        padding: 10px 28px;
+        border-bottom: 1px solid #efede7;
+      }
+
+      .work-toolbar span {
+        width: 26px;
+        height: 18px;
+        border-radius: 4px;
+        background: #efede7;
+      }
+
+      .work-body {
+        padding: 26px 48px;
+        font-size: 15px;
+        line-height: 1.9;
+      }
+
+      .work-body h1 {
+        margin: 0 0 14px;
+        font-size: 22px;
+        font-weight: 500;
+      }
+
+      .work-body p {
+        margin: 0 0 6px;
+        white-space: pre-wrap;
+      }
+
+      .caret {
+        display: inline-block;
+        width: 1.5px;
+        height: 1.1em;
+        margin-left: 1px;
+        vertical-align: -0.18em;
+        background: var(--text);
+        animation: blink 1s steps(1) infinite;
+      }
+
+      @keyframes blink {
+        50% {
+          opacity: 0;
+        }
+      }
+
+      /* 作業中に届く通知 */
+      .toast {
+        position: absolute;
+        right: 22px;
+        bottom: 62px;
+        width: 300px;
+        padding: 14px 16px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: 0 12px 30px rgba(30, 40, 35, 0.2);
+        font-size: 13px;
+        line-height: 1.6;
+        opacity: 0;
+        transform: translateX(24px);
+        transition: opacity 400ms ease, transform 400ms ease;
+      }
+
+      .toast.show {
+        opacity: 1;
+        transform: none;
+      }
+
+      .toast strong {
+        display: block;
+        font-weight: 500;
+      }
+
+      .toast span {
+        color: var(--muted);
+      }
+
+      /* タスクバー(特定OSに寄せない簡素なもの) */
+      .taskbar {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        height: 42px;
+        background: rgba(246, 244, 239, 0.86);
+        border-top: 1px solid rgba(0, 0, 0, 0.06);
+      }
+
+      .taskbar .dock {
+        width: 26px;
+        height: 26px;
+        border-radius: 7px;
+        background: #d6d3ca;
+      }
+
+      .taskbar .dock.work {
+        background: #8fa9b8;
+      }
+
+      .taskbar .dock.app {
+        position: relative;
+        background: #2e6f65;
+      }
+
+      .taskbar .clock {
+        position: absolute;
+        right: 18px;
+        font-size: 13px;
+        text-align: right;
+        line-height: 1.25;
+      }
+
+      .taskbar .clock small {
+        display: block;
+        color: var(--muted);
+        font-size: 10px;
+      }
+
+      /* アプリのウィンドウ。普段は小さな縦長、自動開始時は全画面 */
+      .app-window {
+        position: absolute;
+        right: 92px;
+        top: 34px;
+        z-index: 3;
+        width: 400px;
+        height: 636px;
+        border-radius: 10px;
+        background: var(--panel);
+        box-shadow: 0 18px 50px rgba(30, 40, 35, 0.28);
+        overflow: hidden;
+        transform-origin: 50% 60%;
+        transition: opacity 220ms ease, transform 220ms ease;
+      }
+
+      .app-window.closed {
+        opacity: 0;
+        transform: scale(0.96);
+        pointer-events: none;
+      }
+
+      .app-window iframe {
+        display: block;
+        width: 100%;
+        height: calc(100% - 34px);
+        border: 0;
+      }
+
+      .app-window.fullscreen {
+        inset: 0;
+        z-index: 8;
+        width: auto;
+        height: auto;
+        border-radius: 0;
+        box-shadow: none;
+        transform: none;
+      }
+
+      .app-window.fullscreen .window-bar {
+        display: none;
+      }
+
+      .app-window.fullscreen iframe {
+        height: 100%;
+      }
+
+      /* 字幕 */
+      /* 字幕は作業ウィンドウの上(アプリのウィンドウと重ならない位置)に出す */
+      .caption {
+        position: absolute;
+        left: 450px;
+        bottom: 66px;
+        z-index: 20;
+        width: max-content;
+        max-width: 660px;
+        padding: 14px 30px;
+        border-radius: 22px;
+        line-height: 1.6;
+        text-align: center;
+        background: rgba(32, 33, 31, 0.78);
+        color: #fffdf8;
+        font-size: 22px;
+        letter-spacing: 0.04em;
+        opacity: 0;
+        transform: translate(-50%, 8px);
+        transition: opacity 600ms ease, transform 600ms ease;
+      }
+
+      .caption.show {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
+
+      .caption.on-slow {
+        left: 50%;
+        max-width: none;
+        bottom: 36px;
+        background: transparent;
+        color: var(--muted);
+        font-size: 17px;
+      }
+
+      .caption small {
+        margin-left: 10px;
+        font-size: 0.72em;
+        opacity: 0.8;
+      }
+
+      /* タイトル */
+      .title-card {
+        position: absolute;
+        inset: 0;
+        z-index: 30;
+        display: grid;
+        place-content: center;
+        gap: 18px;
+        text-align: center;
+        background:
+          radial-gradient(circle at 50% 46%, rgba(219, 232, 223, 0.95), transparent 520px),
+          #f6f4ef;
+        opacity: 1;
+        transition: opacity 1200ms ease;
+      }
+
+      .title-card.hide {
+        opacity: 0;
+      }
+
+      .title-card h1 {
+        margin: 0;
+        font-size: 54px;
+        font-weight: 500;
+        letter-spacing: 0.12em;
+      }
+
+      .title-card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 21px;
+        letter-spacing: 0.08em;
+      }
+
+      /* 操作を示すカーソル */
+      .cursor {
+        position: absolute;
+        z-index: 25;
+        left: 0;
+        top: 0;
+        width: 22px;
+        height: 22px;
+        opacity: 0;
+        transition: opacity 300ms ease;
+        pointer-events: none;
+      }
+
+      .cursor.show {
+        opacity: 1;
+      }
+
+      .cursor svg {
+        filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3));
+      }
+
+      .click-ring {
+        position: absolute;
+        z-index: 24;
+        width: 36px;
+        height: 36px;
+        margin: -18px 0 0 -18px;
+        border: 2px solid rgba(46, 111, 101, 0.8);
+        border-radius: 50%;
+        animation: ring 600ms ease-out forwards;
+        pointer-events: none;
+      }
+
+      @keyframes ring {
+        from {
+          transform: scale(0.4);
+          opacity: 1;
+        }
+        to {
+          transform: scale(1.3);
+          opacity: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="desktop">
+      <div class="work-window">
+        <div class="window-bar">
+          <span class="title">展示準備メモ</span>
+          <span class="controls"><span>─</span><span>□</span><span>×</span></span>
+        </div>
+        <div class="work-toolbar"><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="work-body">
+          <h1>展示準備メモ</h1>
+          <p id="workText"></p>
+        </div>
+      </div>
+
+      <div class="toast" id="toast">
+        <strong>新着メッセージ 3件</strong>
+        <span>研究ミーティングの資料、共有しました</span>
+      </div>
+
+      <div class="app-window" id="appWindow">
+        <div class="window-bar">
+          <span class="title">ゆっくリフレッシュ</span>
+          <span class="controls"><span>─</span><span id="appClose">×</span></span>
+        </div>
+        <iframe id="appFrame" title="ゆっくリフレッシュ"></iframe>
+      </div>
+
+      <div class="taskbar">
+        <span class="dock"></span>
+        <span class="dock work"></span>
+        <span class="dock"></span>
+        <span class="dock app"></span>
+        <span class="clock" id="clock"></span>
+      </div>
+    </div>
+
+    <div class="caption" id="caption"></div>
+
+    <div class="cursor" id="cursor">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+        <path d="M4 2 L4 19 L8.5 15 L11.5 22 L14.5 20.8 L11.6 14 L17.5 14 Z" fill="#fff" stroke="#20211f" stroke-width="1.4" stroke-linejoin="round" />
+      </svg>
+    </div>
+
+    <div class="title-card" id="titleCard">
+      <h1>ゆっくリフレッシュ</h1>
+      <p>次の予定の前に、最大60秒だけ整える</p>
+    </div>
+
+    <script src="recorder.js"></script>
+    <script src="stage.js"></script>
+  </body>
+</html>

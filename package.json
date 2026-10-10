@@ -10,6 +10,9 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "make:local": "node scripts/make-with-local-config.js",
+    "demo:record": "electron scripts/demo/record-demo.js",
+    "demo:concept": "electron scripts/demo/record-demo.js --video=concept",
+    "demo:concept-short": "electron scripts/demo/record-demo.js --video=concept-short",
     "check": "node --check app.js && node --check micro-slows.js && node --check electron-main.js && node --check electron-preload.js"
   },
   "devDependencies": {

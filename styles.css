@@ -60,17 +60,17 @@ button {
   padding: 28px 0;
 }
 
-/* ゆっくりフレッシュ中に画面全体を包んでいく霧。進み具合(--mist: 0〜1)はapp.jsが経過時間から決める。
+/* ゆっくリフレッシュ中に画面全体を包んでいく霧。進み具合(--mist: 0〜1)はapp.jsが経過時間から決める。
    霧は画面の端から呼吸円(--mist-x, --mist-y)に向かって寄ってきて、晴れている範囲が少しずつ狭まる。
    .panelはtransformを持つため、position:fixedが画面基準にならない。そこで霧はbody直下に置き、
-   ゆっくりフレッシュ中は枠を消したpanelの文字だけを霧の上に浮かべる */
+   ゆっくリフレッシュ中は枠を消したpanelの文字だけを霧の上に浮かべる */
 @property --mist {
   syntax: "<number>";
   inherits: true;
   initial-value: 0;
 }
 
-/* ゆっくりフレッシュ中だけ背景を少し深い色にして、白い霧が寄ってくる縁を見えやすくする */
+/* ゆっくリフレッシュ中だけ背景を少し深い色にして、白い霧が寄ってくる縁を見えやすくする */
 body::before {
   content: "";
   position: fixed;
@@ -725,7 +725,7 @@ select {
   color: var(--muted);
 }
 
-/* ゆっくりフレッシュ中と色選択の文字は、作業用のUIフォントから離して、細めでゆったり組む */
+/* ゆっくリフレッシュ中と色選択の文字は、作業用のUIフォントから離して、細めでゆったり組む */
 :is(#slowView, #transitionView) {
   font-family: "Zen Kaku Gothic New", "Yu Gothic UI", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
 }

@@ -21,7 +21,7 @@ function createWindow() {
     minWidth: 360,
     minHeight: 600,
     show: false,
-    title: "ゆっくりフレッシュ",
+    title: "ゆっくリフレッシュ",
     icon: appIconPath,
     backgroundColor: "#fffdf8",
     webPreferences: {
@@ -46,10 +46,10 @@ function createWindow() {
 function createTray() {
   const icon = nativeImage.createFromPath(appIconPath).resize({ width: 16, height: 16 });
   tray = new Tray(icon);
-  tray.setToolTip("ゆっくりフレッシュ");
+  tray.setToolTip("ゆっくリフレッシュ");
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: "ゆっくりフレッシュを開く", click: showMainWindow },
+      { label: "ゆっくリフレッシュを開く", click: showMainWindow },
       {
         label: "終了",
         click: () => {
@@ -249,7 +249,7 @@ function startLoopbackServer() {
     <script>
       window.setTimeout(() => {
         window.close();
-        document.getElementById("fallback").textContent = "認可処理は完了しました。このタブを閉じてゆっくりフレッシュに戻ってください。";
+        document.getElementById("fallback").textContent = "認可処理は完了しました。このタブを閉じてゆっくリフレッシュに戻ってください。";
       }, 250);
     </script>
   </body>
@@ -263,8 +263,8 @@ function startLoopbackServer() {
       response.writeHead(error ? 400 : 200, { "Content-Type": "text/html; charset=utf-8" });
       response.end(
         error
-          ? closePage("Google login failed", "ゆっくりフレッシュでGoogle Calendarを読み込めませんでした。")
-          : closePage("Google login complete", "ゆっくりフレッシュに戻ってGoogle Calendarを読み込んでいます。")
+          ? closePage("Google login failed", "ゆっくリフレッシュでGoogle Calendarを読み込めませんでした。")
+          : closePage("Google login complete", "ゆっくリフレッシュに戻ってGoogle Calendarを読み込んでいます。")
       );
       server.close();
 

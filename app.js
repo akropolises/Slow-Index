@@ -46,6 +46,8 @@ const state = {
   source: storedSource === "manual" ? "manual" : "google",
   events: runtimeEvents,
   dismissed: new Set(),
+  // 「余白少」の予定のうち、ユーザーが手動で「届く」にしたもの
+  deliverDespiteNoSpace: new Set(),
   recentSlowIds: readRecentSlowIds(),
   onboarded: localStorage.getItem(storageKeys.onboarded) === "true",
   currentProposal: null,
@@ -388,15 +390,25 @@ function selectSlowForEvent(event, index) {
   return ordered.find((slow) => !state.recentSlowIds.includes(slow.id)) || ordered[0];
 }
 
+// 予定開始5分前の時点で、前の予定がまだ続いていなければ余白あり
 function hasPreEventSpace(event) {
   const startMinutes = minutesFromTime(event.start);
   const slowStart = startMinutes - 5;
   return !state.events
     .filter((candidate) => candidate.id !== event.id)
     .some((candidate) => {
-      const end = minutesFromTime(candidate.start) + Number(candidate.duration);
-      return end > slowStart - 3 && end <= startMinutes;
+      const candidateStart = minutesFromTime(candidate.start);
+      const candidateEnd = candidateStart + Number(candidate.duration);
+      return candidateStart < startMinutes && candidateEnd > slowStart;
     });
+}
+
+// 自動で届く設定か。余白ありは既定で「届く」(見送り可)、余白少は既定で届かず、手動で「届く」にできる
+function isAutoEnabled(proposal) {
+  if (state.dismissed.has(proposal.id)) {
+    return false;
+  }
+  return proposal.hasSpace || state.deliverDespiteNoSpace.has(proposal.id);
 }
 
 function buildProposalForEvent(event, index) {
@@ -483,6 +495,7 @@ function replaceEventsFromGoogle(events) {
   writeStoredEvents();
   const eventIds = new Set(state.events.map((event) => event.id));
   state.dismissed = new Set([...state.dismissed].filter((id) => eventIds.has(id)));
+  state.deliverDespiteNoSpace = new Set([...state.deliverDespiteNoSpace].filter((id) => eventIds.has(id)));
   state.startedAutomatically = new Set([...state.startedAutomatically].filter((id) => eventIds.has(id)));
   activateSource("google");
   syncReminderBackends();
@@ -499,7 +512,7 @@ function completeOnboarding(source = "google") {
 function renderHome() {
   const proposals = state.events.map(buildProposalForEvent);
   const activePrompt = getActivePrompt();
-  const availableCount = proposals.filter((proposal) => proposal.hasSpace && !state.dismissed.has(proposal.id)).length;
+  const availableCount = proposals.filter(isAutoEnabled).length;
   todayMeta.textContent = activePrompt
     ? `${activePrompt.event.title} がもうすぐ始まります`
     : state.events.length === 0
@@ -534,7 +547,7 @@ function renderHome() {
   proposals.forEach((proposal) => {
     const eventEnd = timeFromMinutes(minutesFromTime(proposal.event.start) + Number(proposal.event.duration));
     const isDismissed = state.dismissed.has(proposal.id);
-    const autoLabel = proposal.hasSpace ? (isDismissed ? "見送る" : "届く") : "余白少";
+    const autoLabel = isAutoEnabled(proposal) ? "届く" : proposal.hasSpace ? "見送る" : "余白少";
     const item = document.createElement("article");
     item.className = `calendar-event${isDismissed ? " dismissed" : ""}`;
     item.innerHTML = `
@@ -546,9 +559,7 @@ function renderHome() {
         <span class="event-title">${proposal.event.title}</span>
         <span class="event-subtext">ゆっくりフレッシュ ${proposal.slowStart}〜（${Math.min(proposal.slow.seconds, maxSlowDuration)}秒）</span>
       </button>
-      <button class="event-badge${proposal.hasSpace ? "" : " disabled"}" data-action="toggle-auto" data-id="${proposal.id}" type="button" ${
-      proposal.hasSpace ? "" : "disabled"
-    }>${autoLabel}</button>
+      <button class="event-badge${isAutoEnabled(proposal) ? "" : " disabled"}" data-action="toggle-auto" data-id="${proposal.id}" type="button">${autoLabel}</button>
       <button class="dismiss-event" data-action="delete" data-id="${proposal.event.id}" type="button" aria-label="${proposal.event.title}を削除">×</button>
     `;
     calendarDay.append(item);
@@ -591,7 +602,8 @@ function startSlowFromExternalTrigger(proposalId) {
     return;
   }
 
-  if (state.dismissed.has(proposalId) || state.startedAutomatically.has(proposalId)) {
+  const proposal = state.events.map(buildProposalForEvent).find((item) => item.id === proposalId);
+  if (!proposal || !isAutoStartDue(proposal)) {
     return;
   }
 
@@ -602,7 +614,7 @@ function buildDesktopReminders() {
   const now = Date.now();
   return state.events
     .map(buildProposalForEvent)
-    .filter((proposal) => proposal.hasSpace && !state.dismissed.has(proposal.id))
+    .filter(isAutoEnabled)
     .map((proposal) => {
       const dueAt = new Date();
       dueAt.setHours(Math.floor(proposal.slowStartMinutes / 60), proposal.slowStartMinutes % 60, 0, 0);
@@ -630,26 +642,36 @@ function syncReminderBackends() {
   syncDesktopReminders();
 }
 
-function getDueStartProposal(minutes = nowMinutes()) {
+// 自動開始の条件:今どの予定の最中でもなく、この予定が次の予定で、現在がその5分前(開始時刻から1分未満)であること。
+// renderer側のポーリングとmain processのタイマーの両方がこの判定を通る
+function isAutoStartDue(proposal, minutes = nowMinutes()) {
   if (!state.onboarded || state.view === "onboarding" || state.view === "slow" || state.view === "transition") {
-    return null;
+    return false;
   }
 
-  if (state.events.some((event) => isCurrentEvent(event, minutes))) {
-    return null;
+  // 余白少を手動で「届く」にした予定は、前の予定の最中でも届ける
+  if (proposal.hasSpace && state.events.some((event) => isCurrentEvent(event, minutes))) {
+    return false;
   }
 
+  const hasEarlierUpcomingEvent = state.events.some((event) => {
+    const start = minutesFromTime(event.start);
+    return minutes <= start && start < proposal.eventStartMinutes;
+  });
+
+  return (
+    isAutoEnabled(proposal) &&
+    !hasEarlierUpcomingEvent &&
+    !state.startedAutomatically.has(proposal.id) &&
+    proposal.slowStartMinutes <= minutes &&
+    minutes < proposal.slowStartMinutes + autoStartWindowMinutes
+  );
+}
+
+function getDueStartProposal(minutes = nowMinutes()) {
   return state.events
     .map(buildProposalForEvent)
-    .filter((proposal) => {
-      return (
-        proposal.hasSpace &&
-        !state.dismissed.has(proposal.id) &&
-        !state.startedAutomatically.has(proposal.id) &&
-        proposal.slowStartMinutes <= minutes &&
-        minutes < proposal.slowStartMinutes + autoStartWindowMinutes
-      );
-    })
+    .filter((proposal) => isAutoStartDue(proposal, minutes))
     .sort((a, b) => a.eventStartMinutes - b.eventStartMinutes)[0] || null;
 }
 
@@ -791,12 +813,16 @@ function handleProposalAction(event) {
   }
   if (button.dataset.action === "toggle-auto") {
     const proposal = state.events.map(buildProposalForEvent).find((item) => item.id === id);
-    if (!proposal?.hasSpace) return;
-    if (state.dismissed.has(id)) {
+    if (!proposal) return;
+    if (isAutoEnabled(proposal)) {
+      state.dismissed.add(id);
+      state.deliverDespiteNoSpace.delete(id);
+    } else {
       state.dismissed.delete(id);
       state.startedAutomatically.delete(id);
-    } else {
-      state.dismissed.add(id);
+      if (!proposal.hasSpace) {
+        state.deliverDespiteNoSpace.add(id);
+      }
     }
     syncReminderBackends();
     renderHome();
@@ -804,6 +830,7 @@ function handleProposalAction(event) {
   if (button.dataset.action === "delete") {
     state.events = state.events.filter((item) => item.id !== id);
     state.dismissed.delete(id);
+    state.deliverDespiteNoSpace.delete(id);
     state.startedAutomatically.delete(id);
     writeStoredEvents();
     syncReminderBackends();

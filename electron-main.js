@@ -190,7 +190,10 @@ function normalizeGoogleEvents(items, calendar = {}) {
   return (items || [])
     .filter((event) => event.start?.dateTime && event.end?.dateTime)
     .map((event) => {
-      const startDate = new Date(event.start.dateTime);
+      // 前日から続いている予定は、今日の0:00開始として扱う(前日の開始時刻のままだと今日の分単位の比較で最中と判定できない)
+      const dayStart = new Date();
+      dayStart.setHours(0, 0, 0, 0);
+      const startDate = new Date(Math.max(new Date(event.start.dateTime).getTime(), dayStart.getTime()));
       const endDate = new Date(event.end.dateTime);
       return {
         id: `${calendar.id || "primary"}:${event.id}`,
@@ -475,11 +478,12 @@ function scheduleReminders(reminders) {
       return;
     }
 
+    // 開始してよいかはrenderer側で判定する(予定の最中なら開始しない)。開始する場合はenterSlowModeでウィンドウを出すので、
+    // ここでは表示しない。分の境目ぴったりより少し後に届くよう余裕を持たせる
     const timer = setTimeout(() => {
       reminderTimers.delete(reminder.id);
-      showMainWindow();
-      mainWindow.webContents.send("electron-start-slow", reminder.id);
-    }, delay);
+      mainWindow?.webContents.send("electron-start-slow", reminder.id);
+    }, delay + 1000);
     reminderTimers.set(reminder.id, timer);
   });
 }

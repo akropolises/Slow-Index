@@ -7,6 +7,11 @@
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
+    <div class="mist-layer" aria-hidden="true">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
     <div class="app-shell">
       <header class="topbar">
         <div>
@@ -87,7 +92,6 @@
           <div class="slow-stage" id="slowStage">
             <div class="light-field" aria-hidden="true">
               <div class="breath-circle"></div>
-              <div class="progress-ring" id="progressRing"></div>
             </div>
             <div class="slow-text" id="slowText">
               <p class="eyebrow" id="slowDuration">最大60秒</p>
@@ -108,10 +112,6 @@
             <button class="sense-button sense-blue" data-sense="blue" type="button" aria-label="澄んだ青"></button>
             <button class="sense-button sense-rose" data-sense="rose" type="button" aria-label="やわらかい赤"></button>
           </div>
-        </section>
-
-        <section class="panel hidden" id="sendoffView" aria-labelledby="sendoffTitle">
-          <h2 id="sendoffTitle">いってらっしゃい</h2>
         </section>
 
         <section class="panel hidden" id="galleryView" aria-labelledby="galleryTitle">
@@ -147,16 +147,7 @@
             </button>
             <p id="galleryDayLabel"></p>
             <canvas id="galleryDayCanvas" width="280" height="280"></canvas>
-            <p class="gallery-day-empty-note hidden" id="galleryDayEmptyNote">まだ何も描かれていません</p>
-            <div class="dialogue-area">
-              <p class="dialogue-line" id="dialogueLine"></p>
-            </div>
-            <button class="icon-button icon-button-static" id="dialoguePlayButton" type="button" aria-label="AI対話を再生">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true" focusable="false">
-                <path d="M8 5v14l11-7z" id="dialoguePlayIcon" />
-              </svg>
-            </button>
-          </div>
+            <p class="gallery-day-empty-note hidden" id="galleryDayEmptyNote">まだ何も描かれていません</p>          </div>
         </div>
 
       </main>

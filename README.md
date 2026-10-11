@@ -165,8 +165,8 @@ Google OAuth Client SecretはGitにコミットしません。リポジトリは
 
 審査で求められるホームページとプライバシーポリシーは、`docs/` に置いてGitHub Pagesで公開します。
 
-- ホームページ: https://akropolises.github.io/Slow-Index/
-- プライバシーポリシー: https://akropolises.github.io/Slow-Index/privacy.html
+- ホームページ: https://akropolises.github.io/SlowLyFRESH/
+- プライバシーポリシー: https://akropolises.github.io/SlowLyFRESH/privacy.html
 
 GitHubのリポジトリ設定の Pages で、公開元を `main` ブランチの `/docs` フォルダにします。アプリ内のプライバシーポリシーのリンク先は `electron-main.js` の `privacyPolicyUrl` です。データの扱いを変えた場合は、プライバシーポリシーも合わせて更新します。
 

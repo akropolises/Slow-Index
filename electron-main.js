@@ -13,7 +13,7 @@ const googleTokenUrl = "https://oauth2.googleapis.com/token";
 const googleCalendarEventsUrl = "https://www.googleapis.com/calendar/v3/calendars";
 const googleCalendarListUrl = "https://www.googleapis.com/calendar/v3/users/me/calendarList";
 const googleRevokeUrl = "https://oauth2.googleapis.com/revoke";
-const privacyPolicyUrl = "https://akropolises.github.io/Slow-Index/privacy.html";
+const privacyPolicyUrl = "https://akropolises.github.io/SlowLyFRESH/privacy.html";
 const appIconPath = path.join(__dirname, "assets", "tray-icon.png");
 
 function createWindow() {

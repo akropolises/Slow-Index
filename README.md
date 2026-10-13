@@ -125,7 +125,7 @@ npm run make:local
 
 この場合も `config.local.js` はGitには入りません。packaging中にだけ成果物へコピーされます。
 
-展示用の動画(いずれもMP4、1920x1080、24fps、無音、ループ再生向け)は `scripts/demo/` のスクリプトで録画します。録画中は約1分間、デモ用のウィンドウが最前面に表示されます。動画ではサンプルの予定と時計を使い、実アプリの記録やGoogle連携には触れません。
+展示用の動画(いずれもMP4、1920x1080(縦長版は1080x1920)、24fps、無音、ループ再生向け)は `scripts/demo/` のスクリプトで録画します。録画中は約1分間、デモ用のウィンドウが最前面に表示されます。動画ではサンプルの予定と時計を使い、実アプリの記録やGoogle連携には触れません。
 
 操作デモ(約57秒)は次で録画します。ゆっくリフレッシュ本体は5倍速で見せます。
 
@@ -150,6 +150,15 @@ npm run demo:concept-short
 ```
 
 成果物は `out/demo/micro-slow-concept-short.mp4` に出力されます。
+
+縦置きのディスプレイ向けに、コンセプト動画の縦長版(1080x1920)も録画できます。ディスプレイの高さが足りなくても録画できるよう、縦長のページを90度回して横長のウィンドウに描き、書き出すときに向きを戻しています。
+
+```powershell
+npm run demo:concept:portrait
+npm run demo:concept-short:portrait
+```
+
+成果物は `out/demo/micro-slow-concept-portrait.mp4` と `out/demo/micro-slow-concept-short-portrait.mp4` に出力されます。
 
 複数人で開発する場合は、最初に `CONTRIBUTING.md` を確認してください。
 

@@ -83,10 +83,12 @@ Client SecretはGitにコミットしません。
 - `forge.config.js`: Electron ForgeのWindows zipビルド設定
 - `scripts/make-with-local-config.js`: `config.local.js` を成果物にだけ含める検証用ビルドスクリプト
 - `scripts/demo/`: 展示用デモ動画(操作デモ・コンセプト)の録画スクリプト
+- `scripts/export-artwork.js`: 振り返りキャンバスと呼吸円のSVG書き出しスクリプト
 - `assets/tray-icon.png`: Trayとウィンドウで使うアプリアイコン
 - `assets/app-icon.ico`: Windowsビルド用アイコン
 - `assets/fonts/`: ゆっくリフレッシュ中と色選択で使うZen Kaku Gothic New(SIL Open Font License、`OFL.txt` を同梱)
 - `micro-slows.js`: アプリが読み込むMicro Slowデータ
+- `artwork-shapes.js`: 振り返りキャンバスの1滴の形(アプリの描画とSVG書き出しで共有)
 - `config.js`: 共有用の既定設定
 - `config.example.js`: 個人設定ファイルのひな形
 - `CONTRIBUTING.md`: 複数人開発の手順
@@ -159,6 +161,20 @@ npm run demo:concept-short:portrait
 ```
 
 成果物は `out/demo/micro-slow-concept-portrait.mp4` と `out/demo/micro-slow-concept-short-portrait.mp4` に出力されます。
+
+振り返りキャンバスの記録と、ゆっくリフレッシュ中の呼吸円をSVGに書き出す場合は次を実行します。SVGはIllustratorで開いて編集でき、そのまま.aiとして保存できます。背景は透明です。
+
+```powershell
+npm run export:artwork
+```
+
+アプリの記録フォルダ(`%APPDATA%\micro-slow` など)を自動で探し、一時フォルダに複製してから読むので、アプリの記録は書き換えません。アプリを終了してから実行してください。記録フォルダを指定する場合は `-- --user-data=<フォルダ>` を、書き出し先を変える場合は `-- --out=<フォルダ>` を付けます。
+
+成果物は `out/artwork/` に出力されます。
+
+- `breath-circle.svg`: 呼吸円(呼吸がいちばん大きく濃いときの形。アニメーションと霧のぼかしは含まない)
+- `<日付>/canvas.svg`: その日のキャンバス全体(1滴ずつグループ分け、アプリと同じ360px四方で切り取り)
+- `<日付>/drop-01-green.svg` など: 1滴ずつ(にじみ全体が収まる大きさ)
 
 複数人で開発する場合は、最初に `CONTRIBUTING.md` を確認してください。
 

@@ -133,17 +133,14 @@ function refreshArtworkDate() {
   writeArtworkState();
 }
 
-function randomJitter(range) {
-  return (Math.random() - 0.5) * range;
-}
-
 // 選んだ色を1滴分のデータとして今日のキャンバスに追加する
 function addArtworkDrop(colorKey) {
   refreshArtworkDate();
   const drop = {
     color: colorKey,
-    x: 0.5 + randomJitter(0.5),
-    y: 0.5 + randomJitter(0.5),
+    // キャンバス全体(0〜1)のどこにでも落ちる。端に近い滴は、にじみの一部がキャンバスの外で切れる
+    x: Math.random(),
+    y: Math.random(),
     size: 40 + Math.random() * 50,
   };
   state.artwork.todayDrops.push(drop);
